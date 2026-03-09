@@ -22,3 +22,5 @@ new_migration:
 db_schema:
 	dbml2sql --postgres -o doc/schema.sql doc/db.dbml
 
+sqlc:
+	sqlc generate
