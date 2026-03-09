@@ -1,0 +1,32 @@
+Project eleclog {
+  database_type: 'PostgreSQL'
+  Note: '''
+    # Electricity Log Database
+  '''
+}
+
+Table rooms {
+  id int [pk, increment] // 主键 ID
+  name varchar [not null] // 寝室名称，例如 "302室"
+  area_id varchar [not null] // API 参数：区域 ID
+  building_code varchar [not null] // API 参数：楼栋代码
+  floor_code varchar [not null] // API 参数：楼层代码
+  room_code varchar [not null] // API 参数：房间代码
+  created_at timestamp [not null, default: `now()`]
+
+  Note: '存储需要监控的寝室配置信息'
+}
+
+Table electricity_records {
+  id int [pk, increment]
+  room_id int [ref: > rooms.id] // 外键，关联 rooms 表
+  balance decimal(10,2) [not null] // 当前剩余金额
+  recorded_at timestamp [not null, default: `now()`]
+
+  Note: '存储抓取的电费流水数据'
+  
+  indexes {
+    (room_id, recorded_at) [unique] // 联合唯一索引：防止同一时刻重复记录
+    recorded_at // 时间索引：优化按天、周、月查询的性能
+  }
+}
