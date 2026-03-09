@@ -19,7 +19,7 @@ Table rooms {
 
 Table electricity_records {
   id int [pk, increment]
-  room_id int [ref: > rooms.id] // 外键，关联 rooms 表
+  room_id int [not null, ref: > rooms.id] // 外键，关联 rooms 表
   balance decimal(10,2) [not null] // 当前剩余金额
   recorded_at timestamp [not null, default: `now()`]
 
