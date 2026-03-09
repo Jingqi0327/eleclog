@@ -5,16 +5,15 @@
 package db
 
 import (
-	"database/sql"
 	"time"
 )
 
 // 存储抓取的电费流水数据
 type ElectricityRecord struct {
-	ID         int32         `json:"id"`
-	RoomID     sql.NullInt32 `json:"room_id"`
-	Balance    string        `json:"balance"`
-	RecordedAt time.Time     `json:"recorded_at"`
+	ID         int32     `json:"id"`
+	RoomID     int32     `json:"room_id"`
+	Balance    int32     `json:"balance"`
+	RecordedAt time.Time `json:"recorded_at"`
 }
 
 // 存储需要监控的寝室配置信息

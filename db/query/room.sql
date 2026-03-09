@@ -13,12 +13,16 @@ SELECT * FROM rooms
 WHERE id = $1 LIMIT 1;
 
 -- name: ListRooms :many
--- 查询所有寝室信息
+-- 分页查询所有寝室信息
 SELECT * FROM rooms
 ORDER BY name
 LIMIT $1 
 OFFSET $2;
 
+-- name: ListRoomsAll :many
+-- 查询所有寝室信息
+SELECT * FROM rooms
+ORDER BY name;
 
 -- name: UpdateRoom :one
 -- 更新寝室信息

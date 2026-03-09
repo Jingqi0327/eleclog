@@ -93,9 +93,46 @@ type ListRoomsParams struct {
 	Offset int32 `json:"offset"`
 }
 
-// 查询所有寝室信息
+// 分页查询所有寝室信息
 func (q *Queries) ListRooms(ctx context.Context, arg ListRoomsParams) ([]Room, error) {
 	rows, err := q.db.QueryContext(ctx, listRooms, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Room{}
+	for rows.Next() {
+		var i Room
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.AreaID,
+			&i.BuildingCode,
+			&i.FloorCode,
+			&i.RoomCode,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listRoomsAll = `-- name: ListRoomsAll :many
+SELECT id, name, area_id, building_code, floor_code, room_code, created_at FROM rooms
+ORDER BY name
+`
+
+// 查询所有寝室信息
+func (q *Queries) ListRoomsAll(ctx context.Context) ([]Room, error) {
+	rows, err := q.db.QueryContext(ctx, listRoomsAll)
 	if err != nil {
 		return nil, err
 	}

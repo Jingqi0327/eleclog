@@ -7,7 +7,6 @@ package db
 
 import (
 	"context"
-	"database/sql"
 	"time"
 )
 
@@ -21,8 +20,8 @@ RETURNING id, room_id, balance, recorded_at
 `
 
 type CreateElectricityRecordParams struct {
-	RoomID  sql.NullInt32 `json:"room_id"`
-	Balance string        `json:"balance"`
+	RoomID  int32 `json:"room_id"`
+	Balance int32 `json:"balance"`
 }
 
 // 插入一条电费记录
@@ -38,44 +37,32 @@ func (q *Queries) CreateElectricityRecord(ctx context.Context, arg CreateElectri
 	return i, err
 }
 
-const getDailyAggregatedBalance = `-- name: GetDailyAggregatedBalance :many
-SELECT 
-    date_trunc('day', recorded_at) AS day_bucket
-FROM electricity_records
-WHERE room_id = $1 
-  AND recorded_at BETWEEN $2 AND $3
-GROUP BY day_bucket
-ORDER BY day_bucket ASC
+const createElectricityRecordTest = `-- name: CreateElectricityRecordTest :one
+INSERT INTO electricity_records (
+    room_id, balance, recorded_at
+) VALUES (
+    $1, $2, $3
+)
+RETURNING id, room_id, balance, recorded_at
 `
 
-type GetDailyAggregatedBalanceParams struct {
-	RoomID       sql.NullInt32 `json:"room_id"`
-	RecordedAt   time.Time     `json:"recorded_at"`
-	RecordedAt_2 time.Time     `json:"recorded_at_2"`
+type CreateElectricityRecordTestParams struct {
+	RoomID     int32     `json:"room_id"`
+	Balance    int32     `json:"balance"`
+	RecordedAt time.Time `json:"recorded_at"`
 }
 
-// 按天聚合余额记录
-func (q *Queries) GetDailyAggregatedBalance(ctx context.Context, arg GetDailyAggregatedBalanceParams) ([]int64, error) {
-	rows, err := q.db.QueryContext(ctx, getDailyAggregatedBalance, arg.RoomID, arg.RecordedAt, arg.RecordedAt_2)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []int64{}
-	for rows.Next() {
-		var day_bucket int64
-		if err := rows.Scan(&day_bucket); err != nil {
-			return nil, err
-		}
-		items = append(items, day_bucket)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
+// 用于插入测试数据的电费记录
+func (q *Queries) CreateElectricityRecordTest(ctx context.Context, arg CreateElectricityRecordTestParams) (ElectricityRecord, error) {
+	row := q.db.QueryRowContext(ctx, createElectricityRecordTest, arg.RoomID, arg.Balance, arg.RecordedAt)
+	var i ElectricityRecord
+	err := row.Scan(
+		&i.ID,
+		&i.RoomID,
+		&i.Balance,
+		&i.RecordedAt,
+	)
+	return i, err
 }
 
 const getLatestBalance = `-- name: GetLatestBalance :one
@@ -86,7 +73,7 @@ LIMIT 1
 `
 
 // 获取最新的余额记录
-func (q *Queries) GetLatestBalance(ctx context.Context, roomID sql.NullInt32) (ElectricityRecord, error) {
+func (q *Queries) GetLatestBalance(ctx context.Context, roomID int32) (ElectricityRecord, error) {
 	row := q.db.QueryRowContext(ctx, getLatestBalance, roomID)
 	var i ElectricityRecord
 	err := row.Scan(
@@ -106,9 +93,9 @@ ORDER BY recorded_at ASC
 `
 
 type GetRecordsByHourRangeParams struct {
-	RoomID       sql.NullInt32 `json:"room_id"`
-	RecordedAt   time.Time     `json:"recorded_at"`
-	RecordedAt_2 time.Time     `json:"recorded_at_2"`
+	RoomID       int32     `json:"room_id"`
+	RecordedAt   time.Time `json:"recorded_at"`
+	RecordedAt_2 time.Time `json:"recorded_at_2"`
 }
 
 // 获取指定时间范围内的每小时记录
