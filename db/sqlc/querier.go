@@ -16,13 +16,13 @@ type Querier interface {
 	// 插入一个要查询的寝室信息
 	CreateRoom(ctx context.Context, arg CreateRoomParams) (Room, error)
 	// 删除寝室信息
-	DeleteRoom(ctx context.Context, id int32) error
+	DeleteRoom(ctx context.Context, id int64) error
 	// 获取最新的余额记录
-	GetLatestBalance(ctx context.Context, roomID int32) (ElectricityRecord, error)
+	GetLatestBalance(ctx context.Context, roomID int64) (ElectricityRecord, error)
 	// 获取指定时间范围内的每小时记录
 	GetRecordsByHourRange(ctx context.Context, arg GetRecordsByHourRangeParams) ([]ElectricityRecord, error)
 	// 根据ID查询寝室信息
-	GetRoom(ctx context.Context, id int32) (Room, error)
+	GetRoom(ctx context.Context, id int64) (Room, error)
 	// 分页查询所有寝室信息
 	ListRooms(ctx context.Context, arg ListRoomsParams) ([]Room, error)
 	// 查询所有寝室信息

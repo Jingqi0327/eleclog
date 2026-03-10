@@ -6,22 +6,22 @@ Project eleclog {
 }
 
 Table rooms {
-  id int [pk, increment] // 主键 ID
+  id bigserial [pk, increment] // 主键 ID
   name varchar [not null] // 寝室名称，例如 "302室"
   area_id varchar [not null] // API 参数：区域 ID
   building_code varchar [not null] // API 参数：楼栋代码
   floor_code varchar [not null] // API 参数：楼层代码
   room_code varchar [not null] // API 参数：房间代码
-  created_at timestamp [not null, default: `now()`]
+  created_at timestamptz [not null, default: `now()`]
 
   Note: '存储需要监控的寝室配置信息'
 }
 
 Table electricity_records {
-  id int [pk, increment]
-  room_id int [not null, ref: > rooms.id] // 外键，关联 rooms 表
-  balance int [not null] // 当前剩余金额,单位分
-  recorded_at timestamp [not null, default: `now()`]
+  id bigint [pk, increment]
+  room_id bigint [not null, ref: > rooms.id] // 外键，关联 rooms 表
+  balance bigint [not null] // 当前剩余金额,单位分
+  recorded_at timestamptz [not null, default: `now()`]
 
   Note: '存储抓取的电费流水数据'
   

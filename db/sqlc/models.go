@@ -10,15 +10,15 @@ import (
 
 // 存储抓取的电费流水数据
 type ElectricityRecord struct {
-	ID         int32     `json:"id"`
-	RoomID     int32     `json:"room_id"`
-	Balance    int32     `json:"balance"`
+	ID         int64     `json:"id"`
+	RoomID     int64     `json:"room_id"`
+	Balance    int64     `json:"balance"`
 	RecordedAt time.Time `json:"recorded_at"`
 }
 
 // 存储需要监控的寝室配置信息
 type Room struct {
-	ID           int32     `json:"id"`
+	ID           int64     `json:"id"`
 	Name         string    `json:"name"`
 	AreaID       string    `json:"area_id"`
 	BuildingCode string    `json:"building_code"`

@@ -61,11 +61,11 @@ func (server *Server) createRoom(ctx *gin.Context) {
 }
 
 type getRoomRequest struct {
-	ID int32 `uri:"id" binding:"required,min=1"`
+	ID int64 `uri:"id" binding:"required,min=1"`
 }
 
 type getRoomResponse struct {
-	ID           int32     `json:"id"`
+	ID           int64     `json:"id"`
 	Name         string    `json:"name"`
 	AreaID       string    `json:"area_id"`
 	BuildingCode string    `json:"building_code"`

@@ -11,13 +11,13 @@ import (
 )
 
 type getElectricityBalanceRequest struct {
-	RoomID int32 `uri:"room_id" binding:"required,min=1"`
+	RoomID int64 `uri:"room_id" binding:"required,min=1"`
 }
 
 type getElectricityBalanceResponse struct {
-	ID         int32     `json:"id"`
-	RoomID     int32     `json:"room_id"`
-	Balance    int32     `json:"balance"`
+	ID         int64     `json:"id"`
+	RoomID     int64     `json:"room_id"`
+	Balance    int64     `json:"balance"`
 	RecordedAt time.Time `json:"recorded_at"`
 }
 

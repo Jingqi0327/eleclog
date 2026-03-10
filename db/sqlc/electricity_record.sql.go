@@ -20,8 +20,8 @@ RETURNING id, room_id, balance, recorded_at
 `
 
 type CreateElectricityRecordParams struct {
-	RoomID  int32 `json:"room_id"`
-	Balance int32 `json:"balance"`
+	RoomID  int64 `json:"room_id"`
+	Balance int64 `json:"balance"`
 }
 
 // 插入一条电费记录
@@ -47,8 +47,8 @@ RETURNING id, room_id, balance, recorded_at
 `
 
 type CreateElectricityRecordTestParams struct {
-	RoomID     int32     `json:"room_id"`
-	Balance    int32     `json:"balance"`
+	RoomID     int64     `json:"room_id"`
+	Balance    int64     `json:"balance"`
 	RecordedAt time.Time `json:"recorded_at"`
 }
 
@@ -73,7 +73,7 @@ LIMIT 1
 `
 
 // 获取最新的余额记录
-func (q *Queries) GetLatestBalance(ctx context.Context, roomID int32) (ElectricityRecord, error) {
+func (q *Queries) GetLatestBalance(ctx context.Context, roomID int64) (ElectricityRecord, error) {
 	row := q.db.QueryRowContext(ctx, getLatestBalance, roomID)
 	var i ElectricityRecord
 	err := row.Scan(
@@ -93,7 +93,7 @@ ORDER BY recorded_at ASC
 `
 
 type GetRecordsByHourRangeParams struct {
-	RoomID       int32     `json:"room_id"`
+	RoomID       int64     `json:"room_id"`
 	RecordedAt   time.Time `json:"recorded_at"`
 	RecordedAt_2 time.Time `json:"recorded_at_2"`
 }

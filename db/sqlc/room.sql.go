@@ -55,7 +55,7 @@ WHERE id = $1
 `
 
 // 删除寝室信息
-func (q *Queries) DeleteRoom(ctx context.Context, id int32) error {
+func (q *Queries) DeleteRoom(ctx context.Context, id int64) error {
 	_, err := q.db.ExecContext(ctx, deleteRoom, id)
 	return err
 }
@@ -66,7 +66,7 @@ WHERE id = $1 LIMIT 1
 `
 
 // 根据ID查询寝室信息
-func (q *Queries) GetRoom(ctx context.Context, id int32) (Room, error) {
+func (q *Queries) GetRoom(ctx context.Context, id int64) (Room, error) {
 	row := q.db.QueryRowContext(ctx, getRoom, id)
 	var i Room
 	err := row.Scan(
@@ -174,7 +174,7 @@ RETURNING id, name, area_id, building_code, floor_code, room_code, created_at
 `
 
 type UpdateRoomParams struct {
-	ID           int32          `json:"id"`
+	ID           int64          `json:"id"`
 	Name         sql.NullString `json:"name"`
 	AreaID       sql.NullString `json:"area_id"`
 	BuildingCode sql.NullString `json:"building_code"`
