@@ -12,7 +12,7 @@ type Querier interface {
 	// 插入一条电费记录
 	CreateElectricityRecord(ctx context.Context, arg CreateElectricityRecordParams) (ElectricityRecord, error)
 	// 用于插入测试数据的电费记录
-	CreateElectricityRecordTest(ctx context.Context, arg CreateElectricityRecordTestParams) (ElectricityRecord, error)
+	CreateElectricityRecordwithTime(ctx context.Context, arg CreateElectricityRecordwithTimeParams) (ElectricityRecord, error)
 	// 插入一个要查询的寝室信息
 	CreateRoom(ctx context.Context, arg CreateRoomParams) (Room, error)
 	// 删除寝室信息

@@ -7,7 +7,7 @@ INSERT INTO electricity_records (
 )
 RETURNING *;
 
--- name: CreateElectricityRecordTest :one
+-- name: CreateElectricityRecordwithTime :one
 -- 用于插入测试数据的电费记录
 INSERT INTO electricity_records (
     room_id, balance, recorded_at
@@ -20,7 +20,7 @@ RETURNING *;
 -- 获取指定时间范围内的每小时记录
 SELECT * FROM electricity_records
 WHERE room_id = $1 
-  AND recorded_at BETWEEN $2 AND $3
+  AND recorded_at BETWEEN @start_time AND @end_time
 ORDER BY recorded_at ASC;
 
 

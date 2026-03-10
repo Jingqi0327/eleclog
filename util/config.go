@@ -9,6 +9,7 @@ type Config struct {
 	Environment       string `mapstructure:"ENVIRONMENT"`
 	DBDriver          string `mapstructure:"DB_DRIVER"`
 	DBSource          string `mapstructure:"DB_SOURCE"`
+	TestDBSource      string `mapstructure:"TEST_DB_SOURCE"`
 	HTTPServerAddress string `mapstructure:"HTTP_SERVER_ADDRESS"`
 	ShiroJID          string `mapstructure:"SHIRO_JID"`
 }

@@ -71,11 +71,10 @@ func (server *Server) getElectricityBalanceByHourRange(ctx *gin.Context) {
 		return
 	}
 
-
 	arg := db.GetRecordsByHourRangeParams{
-		RoomID:       uriReq.RoomID,
-		RecordedAt:   req.StartTime,
-		RecordedAt_2: req.EndTime,
+		RoomID:    uriReq.RoomID,
+		StartTime: req.StartTime,
+		EndTime:   req.EndTime,
 	}
 
 	records, err := server.store.GetRecordsByHourRange(ctx, arg)
@@ -91,5 +90,3 @@ func (server *Server) getElectricityBalanceByHourRange(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, resp)
 }
-
-

@@ -37,7 +37,7 @@ func (q *Queries) CreateElectricityRecord(ctx context.Context, arg CreateElectri
 	return i, err
 }
 
-const createElectricityRecordTest = `-- name: CreateElectricityRecordTest :one
+const createElectricityRecordwithTime = `-- name: CreateElectricityRecordwithTime :one
 INSERT INTO electricity_records (
     room_id, balance, recorded_at
 ) VALUES (
@@ -46,15 +46,15 @@ INSERT INTO electricity_records (
 RETURNING id, room_id, balance, recorded_at
 `
 
-type CreateElectricityRecordTestParams struct {
+type CreateElectricityRecordwithTimeParams struct {
 	RoomID     int64     `json:"room_id"`
 	Balance    int64     `json:"balance"`
 	RecordedAt time.Time `json:"recorded_at"`
 }
 
 // 用于插入测试数据的电费记录
-func (q *Queries) CreateElectricityRecordTest(ctx context.Context, arg CreateElectricityRecordTestParams) (ElectricityRecord, error) {
-	row := q.db.QueryRowContext(ctx, createElectricityRecordTest, arg.RoomID, arg.Balance, arg.RecordedAt)
+func (q *Queries) CreateElectricityRecordwithTime(ctx context.Context, arg CreateElectricityRecordwithTimeParams) (ElectricityRecord, error) {
+	row := q.db.QueryRowContext(ctx, createElectricityRecordwithTime, arg.RoomID, arg.Balance, arg.RecordedAt)
 	var i ElectricityRecord
 	err := row.Scan(
 		&i.ID,
@@ -93,14 +93,14 @@ ORDER BY recorded_at ASC
 `
 
 type GetRecordsByHourRangeParams struct {
-	RoomID       int64     `json:"room_id"`
-	RecordedAt   time.Time `json:"recorded_at"`
-	RecordedAt_2 time.Time `json:"recorded_at_2"`
+	RoomID    int64     `json:"room_id"`
+	StartTime time.Time `json:"start_time"`
+	EndTime   time.Time `json:"end_time"`
 }
 
 // 获取指定时间范围内的每小时记录
 func (q *Queries) GetRecordsByHourRange(ctx context.Context, arg GetRecordsByHourRangeParams) ([]ElectricityRecord, error) {
-	rows, err := q.db.QueryContext(ctx, getRecordsByHourRange, arg.RoomID, arg.RecordedAt, arg.RecordedAt_2)
+	rows, err := q.db.QueryContext(ctx, getRecordsByHourRange, arg.RoomID, arg.StartTime, arg.EndTime)
 	if err != nil {
 		return nil, err
 	}
