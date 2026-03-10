@@ -12,6 +12,7 @@ type Config struct {
 	TestDBSource      string `mapstructure:"TEST_DB_SOURCE"`
 	HTTPServerAddress string `mapstructure:"HTTP_SERVER_ADDRESS"`
 	ShiroJID          string `mapstructure:"SHIRO_JID"`
+	PricePerKWh       float64 `mapstructure:"PRICE_PER_KWH"`
 }
 
 // LoadConfig 从指定路径加载配置文件

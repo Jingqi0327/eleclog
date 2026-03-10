@@ -26,6 +26,21 @@ func NewServer(config util.Config, store db.Store) (*Server, error) {
 func (server *Server) setupRouter() {
 	router := gin.Default()
 
+	// 启用CORS支持
+	router.Use(func(c *gin.Context) {
+		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
+		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, DELETE")
+
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(204)
+			return
+		}
+
+		c.Next()
+	})
+
 	// 定义API路由
 	router.POST("/rooms", server.createRoom)
 	router.GET("/rooms/:id", server.getRoom)
@@ -34,7 +49,7 @@ func (server *Server) setupRouter() {
 	router.DELETE("/rooms/:id", server.deleteRoom)
 
 	router.GET("/electricity-balances/latest/:room_id", server.getLatestElectricityBalance)
-	router.GET("/electricity-balances/hour-range/:room_id", server.getElectricityBalanceByHourRange)
+	router.GET("/electricity-balances/hour-range/:room_id", server.getElectricityRecordByHourRange)
 
 	server.router = router
 }

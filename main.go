@@ -7,6 +7,8 @@ import (
 	"github.com/Jingqi0327/eleclog/api"
 	"github.com/Jingqi0327/eleclog/collector"
 	db "github.com/Jingqi0327/eleclog/db/sqlc"
+	_ "github.com/Jingqi0327/eleclog/testdata"
+	_ "github.com/Jingqi0327/eleclog/testdata"
 	"github.com/Jingqi0327/eleclog/util"
 	_ "github.com/lib/pq"
 )
@@ -24,7 +26,7 @@ func main() {
 
 	store := db.NewStore(conn)
 
-	go runCollector(config,store)
+	//go runCollector(config,store)
 
 	runGinServer(config, store)
 	//testdata.Insert_data(store)
@@ -45,6 +47,8 @@ func runGinServer(config util.Config, store db.Store) {
 func runCollector(config util.Config, store db.Store) {
 	collector := collector.NewCollector(config, store)
 
-	collector.RunNow()
+	//collector.RunNow()
+
+	collector.Start()
 
 }
