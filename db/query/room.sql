@@ -15,7 +15,7 @@ WHERE id = $1 LIMIT 1;
 -- name: ListRooms :many
 -- 分页查询所有寝室信息
 SELECT * FROM rooms
-ORDER BY name
+ORDER BY id ASC
 LIMIT $1 
 OFFSET $2;
 

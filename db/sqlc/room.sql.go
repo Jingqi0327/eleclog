@@ -95,7 +95,7 @@ func (q *Queries) GetRoom(ctx context.Context, id int64) (Room, error) {
 
 const listRooms = `-- name: ListRooms :many
 SELECT id, name, area_id, building_code, floor_code, room_code, created_at FROM rooms
-ORDER BY name
+ORDER BY id ASC
 LIMIT $1 
 OFFSET $2
 `

@@ -17,6 +17,8 @@ type Querier interface {
 	CreateElectricityRecordwithTime(ctx context.Context, arg CreateElectricityRecordwithTimeParams) (ElectricityRecord, error)
 	// 插入一个要查询的寝室信息
 	CreateRoom(ctx context.Context, arg CreateRoomParams) (Room, error)
+	//创建用户
+	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	// 删除寝室信息
 	DeleteRoom(ctx context.Context, id int64) error
 	// 获取最新的余额记录
@@ -25,12 +27,16 @@ type Querier interface {
 	GetRecordsByHourRange(ctx context.Context, arg GetRecordsByHourRangeParams) ([]ElectricityRecord, error)
 	// 根据ID查询寝室信息
 	GetRoom(ctx context.Context, id int64) (Room, error)
+	//查询单个用户
+	GetUser(ctx context.Context, username string) (User, error)
 	// 分页查询所有寝室信息
 	ListRooms(ctx context.Context, arg ListRoomsParams) ([]Room, error)
 	// 查询所有寝室信息
 	ListRoomsAll(ctx context.Context) ([]Room, error)
 	// 更新寝室信息
 	UpdateRoom(ctx context.Context, arg UpdateRoomParams) (Room, error)
+	//更新用户信息
+	UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error)
 }
 
 var _ Querier = (*Queries)(nil)

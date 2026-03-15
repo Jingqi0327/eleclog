@@ -30,3 +30,11 @@ Table electricity_records {
     recorded_at // 时间索引：优化按天、周、月查询的性能
   }
 }
+
+Table users as U {
+  username varchar [pk]
+  hashed_password varchar [not null]
+  full_name varchar [not null]
+  email varchar [unique, not null]
+  created_at timestamptz [not null, default: `now()`]
+}

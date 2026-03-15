@@ -1,6 +1,6 @@
 -- SQL dump generated using DBML (dbml.dbdiagram.io)
 -- Database: PostgreSQL
--- Generated at: 2026-03-10T06:13:33.882Z
+-- Generated at: 2026-03-15T13:23:08.873Z
 
 CREATE TABLE "rooms" (
   "id" BIGSERIAL PRIMARY KEY,
@@ -17,6 +17,14 @@ CREATE TABLE "electricity_records" (
   "room_id" bigint NOT NULL,
   "balance" bigint NOT NULL,
   "recorded_at" timestamptz NOT NULL DEFAULT (now())
+);
+
+CREATE TABLE "users" (
+  "username" varchar PRIMARY KEY,
+  "hashed_password" varchar NOT NULL,
+  "full_name" varchar NOT NULL,
+  "email" varchar UNIQUE NOT NULL,
+  "created_at" timestamptz NOT NULL DEFAULT (now())
 );
 
 CREATE UNIQUE INDEX ON "electricity_records" ("room_id", "recorded_at");
