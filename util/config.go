@@ -6,13 +6,16 @@ import (
 
 // Config存储应用程序的配置信息
 type Config struct {
-	Environment       string `mapstructure:"ENVIRONMENT"`
-	DBDriver          string `mapstructure:"DB_DRIVER"`
-	DBSource          string `mapstructure:"DB_SOURCE"`
-	TestDBSource      string `mapstructure:"TEST_DB_SOURCE"`
-	HTTPServerAddress string `mapstructure:"HTTP_SERVER_ADDRESS"`
-	ShiroJID          string `mapstructure:"SHIRO_JID"`
-	PricePerKWh       float64 `mapstructure:"PRICE_PER_KWH"`
+	Environment         string  `mapstructure:"ENVIRONMENT"`
+	DBDriver            string  `mapstructure:"DB_DRIVER"`
+	DBSource            string  `mapstructure:"DB_SOURCE"`
+	TestDBSource        string  `mapstructure:"TEST_DB_SOURCE"`
+	HTTPServerAddress   string  `mapstructure:"HTTP_SERVER_ADDRESS"`
+	ShiroJID            string  `mapstructure:"SHIRO_JID"`
+	PricePerKWh         float64 `mapstructure:"PRICE_PER_KWH"`
+	EmailSenderName     string  `mapstructure:"EMAIL_SENDER_NAME"`
+	EmailSenderAddress  string  `mapstructure:"EMAIL_SENDER_ADDRESS"`
+	EmailSenderPassword string  `mapstructure:"EMAIL_SENDER_PASSWORD"`
 }
 
 // LoadConfig 从指定路径加载配置文件
