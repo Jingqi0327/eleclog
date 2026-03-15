@@ -9,6 +9,8 @@ import (
 )
 
 type Querier interface {
+	// 统计寝室总数
+	CountRooms(ctx context.Context) (int64, error)
 	// 插入一条电费记录
 	CreateElectricityRecord(ctx context.Context, arg CreateElectricityRecordParams) (ElectricityRecord, error)
 	// 用于插入测试数据的电费记录

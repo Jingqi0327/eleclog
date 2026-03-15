@@ -39,3 +39,7 @@ RETURNING *;
 -- 删除寝室信息
 DELETE FROM rooms
 WHERE id = $1;
+
+-- name: CountRooms :one
+-- 统计寝室总数
+SELECT count(*) FROM rooms;

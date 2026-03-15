@@ -103,11 +103,11 @@ func TestDeleteRoom(t *testing.T) {
 func TestUpdateRoom(t *testing.T) {
 	room1 := createRandomRoom(t)
 
-	newName:=util.RandomName(6)
-	newAreaID:=util.RandomCode(6)
-	newBuildingCode:=util.RandomCode(6)
-	newFloorCode:=util.RandomCode(6)
-	newRoomCode:=util.RandomCode(6)
+	newName := util.RandomName(6)
+	newAreaID := util.RandomCode(6)
+	newBuildingCode := util.RandomCode(6)
+	newFloorCode := util.RandomCode(6)
+	newRoomCode := util.RandomCode(6)
 
 	arg := UpdateRoomParams{
 		ID:           room1.ID,
@@ -128,6 +128,17 @@ func TestUpdateRoom(t *testing.T) {
 	require.Equal(t, newBuildingCode, room2.BuildingCode)
 	require.Equal(t, newFloorCode, room2.FloorCode)
 	require.Equal(t, newRoomCode, room2.RoomCode)
-	require.WithinDuration(t, room1.CreatedAt, room2.CreatedAt, time.Minute)	
+	require.WithinDuration(t, room1.CreatedAt, room2.CreatedAt, time.Minute)
 
+}
+
+func TestCountRooms(t *testing.T) {
+	beforeCount, err := testStore.CountRooms(context.Background())
+	require.NoError(t, err)
+	for i := 0; i < 10; i++ {
+		createRandomRoom(t)
+	}
+	afterCount, err := testStore.CountRooms(context.Background())
+	require.NoError(t, err)
+	require.Equal(t, beforeCount+10, afterCount)
 }

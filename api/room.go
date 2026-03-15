@@ -112,6 +112,11 @@ type listRoomsRequest struct {
 	PageSize int32 `form:"page_size" binding:"required,min=1,max=20"`
 }
 
+type listRoomsResponse struct {
+	Total int64             `json:"total"`
+	Rooms []getRoomResponse `json:"rooms"`
+}
+
 func (server *Server) listRooms(ctx *gin.Context) {
 	var req listRoomsRequest
 	if err := ctx.ShouldBindQuery(&req); err != nil {
@@ -130,9 +135,18 @@ func (server *Server) listRooms(ctx *gin.Context) {
 		return
 	}
 
-	resp := make([]getRoomResponse, 0, len(rooms))
+	total, err := server.store.CountRooms(ctx)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	resp := listRoomsResponse{
+		Total: total,
+		Rooms: make([]getRoomResponse, 0, len(rooms)),
+	}
 	for _, room := range rooms {
-		resp = append(resp, newGetRoomResponse(room))
+		resp.Rooms = append(resp.Rooms, newGetRoomResponse(room))
 	}
 
 	ctx.JSON(http.StatusOK, resp)

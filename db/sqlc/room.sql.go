@@ -10,6 +10,18 @@ import (
 	"database/sql"
 )
 
+const countRooms = `-- name: CountRooms :one
+SELECT count(*) FROM rooms
+`
+
+// 统计寝室总数
+func (q *Queries) CountRooms(ctx context.Context) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countRooms)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createRoom = `-- name: CreateRoom :one
 INSERT INTO rooms (
   name, area_id, building_code, floor_code, room_code
