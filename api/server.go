@@ -1,21 +1,31 @@
 package api
 
 import (
+	"fmt"
+
 	db "github.com/Jingqi0327/eleclog/db/sqlc"
+	token "github.com/Jingqi0327/eleclog/token"
 	"github.com/Jingqi0327/eleclog/util"
 	"github.com/gin-gonic/gin"
 )
 
 type Server struct {
-	store  db.Store
-	router *gin.Engine
-	config util.Config
+	store      db.Store
+	router     *gin.Engine
+	config     util.Config
+	tokenMaker token.Maker
 }
 
 func NewServer(config util.Config, store db.Store) (*Server, error) {
+	tokenMaker, err := token.NewPasetoMaker(config.TokenSymmetricKey)
+	if err != nil {
+		return nil, fmt.Errorf("cannot create token maker: %w", err)
+	}
+
 	server := &Server{
-		store:  store,
-		config: config,
+		store:      store,
+		config:     config,
+		tokenMaker: tokenMaker,
 	}
 
 	server.setupRouter()
@@ -50,6 +60,9 @@ func (server *Server) setupRouter() {
 
 	router.GET("/electricity-balances/latest/:room_id", server.getLatestElectricityBalance)
 	router.GET("/electricity-balances/hour-range/:room_id", server.getElectricityRecordByHourRange)
+
+	router.POST("/users", server.createUser)
+	router.POST("/users/login", server.loginUser)
 
 	server.router = router
 }
