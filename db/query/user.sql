@@ -24,3 +24,7 @@ SET
 WHERE 
   username = $1
 RETURNING *;
+
+-- name: CountUsers :one
+-- 查询用户个数
+SELECT COUNT(*) FROM users;

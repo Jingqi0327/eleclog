@@ -21,6 +21,10 @@ type Config struct {
 	EmailSenderName      string        `mapstructure:"EMAIL_SENDER_NAME"`
 	EmailSenderAddress   string        `mapstructure:"EMAIL_SENDER_ADDRESS"`
 	EmailSenderPassword  string        `mapstructure:"EMAIL_SENDER_PASSWORD"`
+	Username             string        `mapstructure:"USERNAME"`
+	Password             string        `mapstructure:"PASSWORD"`
+	FullName             string        `mapstructure:"FULL_NAME"`
+	Email                string        `mapstructure:"EMAIL"`
 }
 
 // LoadConfig 从指定路径加载配置文件
