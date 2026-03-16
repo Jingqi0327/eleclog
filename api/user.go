@@ -7,6 +7,7 @@ import (
 	"time"
 
 	db "github.com/Jingqi0327/eleclog/db/sqlc"
+	token "github.com/Jingqi0327/eleclog/token"
 	util "github.com/Jingqi0327/eleclog/util"
 	"github.com/gin-gonic/gin"
 )
@@ -129,4 +130,76 @@ func (server *Server) loginUser(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, rsp)
+}
+
+type UpdateUserRequest struct {
+	Username string  `json:"username" binding:"required,alphanum"`
+	Password *string `json:"password,omitempty" binding:"omitempty,min=6"` //omitempty表示如果密码字段为空，则不进行验证
+	FullName *string `json:"full_name,omitempty"`
+	Email    *string `json:"email,omitempty" binding:"omitempty,email"`
+}
+
+type UpdateUserResponse struct {
+	User UserResponse `json:"user"`
+}
+
+func (server *Server) UpdateUser(ctx *gin.Context) {
+	var req UpdateUserRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	payload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
+	if payload.Username != req.Username {
+		ctx.JSON(http.StatusUnauthorized, errorResponse(errors.New("cannot update other user's info")))
+		return
+	}
+
+	arg := db.UpdateUserParams{
+		Username: req.Username,
+	}
+
+	if req.FullName != nil {
+		arg.FullName = sql.NullString{
+			String: *req.FullName,
+			Valid:  true,
+		}
+	}
+
+	if req.Email != nil {
+		arg.Email = sql.NullString{
+			String: *req.Email,
+			Valid:  true,
+		}
+	}
+
+	if req.Password != nil {
+		hashPassword, err := util.HashPassword(*req.Password)
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+			return
+		}
+		arg.HashedPassword = sql.NullString{
+			String: hashPassword,
+			Valid:  true,
+		}
+	}
+
+	user, err := server.store.UpdateUser(ctx, arg)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			ctx.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	rsp := UpdateUserResponse{
+		User: newUserResponse(user),
+	}
+
+	ctx.JSON(http.StatusOK, rsp)
+
 }

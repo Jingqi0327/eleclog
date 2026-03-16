@@ -55,6 +55,7 @@ func (server *Server) setupRouter() {
 	authRoutes.POST("/rooms", server.createRoom)
 	authRoutes.DELETE("/rooms/:id", server.deleteRoom)
 	authRoutes.POST("/users", server.createUser)
+	authRoutes.PUT("/users", server.UpdateUser)
 	// 代理路由：转发到 xiaofubao 外部 API
 	authRoutes.GET("/proxy/areas", server.proxyQueryArea)
 	authRoutes.GET("/proxy/buildings", server.proxyQueryBuilding)

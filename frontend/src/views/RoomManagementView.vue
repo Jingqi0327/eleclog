@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import Button from 'primevue/button'
 import store from '@/store'
+import UserProfileMenu from '@/components/UserProfileMenu.vue'
 import RoomAddForm from '@/components/rooms/RoomAddForm.vue'
 import RoomDeleteTable from '@/components/rooms/RoomDeleteTable.vue'
 
@@ -27,13 +28,16 @@ const handleLogout = async () => {
         <i class="pi pi-home text-blue-500"></i>
         <h2>房间管理</h2>
       </div>
-      <Button
-        label="退出登录"
-        icon="pi pi-sign-out"
-        severity="secondary"
-        outlined
-        @click="handleLogout"
-      />
+      <div class="header-actions">
+        <UserProfileMenu />
+        <Button
+          label="退出登录"
+          icon="pi pi-sign-out"
+          severity="secondary"
+          outlined
+          @click="handleLogout"
+        />
+      </div>
     </div>
 
     <div class="management-grid">
@@ -57,6 +61,12 @@ const handleLogout = async () => {
   margin-bottom: 1rem;
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .title-group {
   display: flex;
   align-items: center;
@@ -76,6 +86,16 @@ const handleLogout = async () => {
 }
 
 @media (max-width: 1024px) {
+  .page-header {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .header-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
   .management-grid {
     grid-template-columns: 1fr;
   }
