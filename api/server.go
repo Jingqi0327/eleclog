@@ -64,6 +64,13 @@ func (server *Server) setupRouter() {
 	router.POST("/users", server.createUser)
 	router.POST("/users/login", server.loginUser)
 
+	// 代理路由：转发到 xiaofubao 外部 API
+	router.GET("/proxy/areas", server.proxyQueryArea)
+	router.GET("/proxy/buildings", server.proxyQueryBuilding)
+	router.GET("/proxy/floors", server.proxyQueryFloor)
+	router.GET("/proxy/rooms", server.proxyQueryRoom)
+	router.GET("/proxy/room-surplus", server.proxyQueryRoomSurplus)
+
 	server.router = router
 }
 
