@@ -12,10 +12,10 @@ import (
 
 type createRoomRequest struct {
 	Name         string `json:"name" binding:"required"`
-	AreaID       string `json:"area_id" binding:"required,alphanum"`
-	BuildingCode string `json:"building_code" binding:"required,alphanum"`
-	FloorCode    string `json:"floor_code" binding:"required,alphanum"`
-	RoomCode     string `json:"room_code" binding:"required,alphanum"`
+	AreaID       string `json:"area_id" binding:"required"`
+	BuildingCode string `json:"building_code" binding:"required"`
+	FloorCode    string `json:"floor_code" binding:"required"`
+	RoomCode     string `json:"room_code" binding:"required"`
 }
 
 type createRoomResponse struct {

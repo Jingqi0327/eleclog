@@ -51,25 +51,28 @@ func (server *Server) setupRouter() {
 		c.Next()
 	})
 
-	// 定义API路由
-	router.POST("/rooms", server.createRoom)
+	authRoutes := router.Group("/").Use(authMiddleware(server))
+	authRoutes.POST("/rooms", server.createRoom)
+	authRoutes.DELETE("/rooms/:id", server.deleteRoom)
+	authRoutes.POST("/users", server.createUser)
+	// 代理路由：转发到 xiaofubao 外部 API
+	authRoutes.GET("/proxy/areas", server.proxyQueryArea)
+	authRoutes.GET("/proxy/buildings", server.proxyQueryBuilding)
+	authRoutes.GET("/proxy/floors", server.proxyQueryFloor)
+	authRoutes.GET("/proxy/rooms", server.proxyQueryRoom)
+	authRoutes.GET("/proxy/room-surplus", server.proxyQueryRoomSurplus)
+
+	
 	router.GET("/rooms/:id", server.getRoom)
 	router.GET("/rooms", server.listRooms)
 	router.PUT("/rooms/:id", server.updateRoom)
-	router.DELETE("/rooms/:id", server.deleteRoom)
+	
 
 	router.GET("/electricity-balances/latest/:room_id", server.getLatestElectricityBalance)
 	router.GET("/electricity-balances/hour-range/:room_id", server.getElectricityRecordByHourRange)
 
-	router.POST("/users", server.createUser)
 	router.POST("/users/login", server.loginUser)
 
-	// 代理路由：转发到 xiaofubao 外部 API
-	router.GET("/proxy/areas", server.proxyQueryArea)
-	router.GET("/proxy/buildings", server.proxyQueryBuilding)
-	router.GET("/proxy/floors", server.proxyQueryFloor)
-	router.GET("/proxy/rooms", server.proxyQueryRoom)
-	router.GET("/proxy/room-surplus", server.proxyQueryRoomSurplus)
 
 	server.router = router
 }
