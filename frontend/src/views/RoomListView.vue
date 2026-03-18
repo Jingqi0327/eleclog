@@ -52,13 +52,11 @@
 
 <script setup lang="ts">
 import { computed, ref, onMounted } from 'vue'
-import axios from 'axios'
+import { apiClient } from '@/client'
 import DataTable, { type DataTablePageEvent } from 'primevue/datatable'
 import Column from 'primevue/column'
 import Button from 'primevue/button'
 import Card from 'primevue/card'
-
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
 
 interface Room {
   id: number
@@ -84,7 +82,7 @@ const lazyParams = ref({
 const loadLazyData = async () => {
   loading.value = true
   try {
-    const response = await axios.get(`${API_BASE}/rooms`, {
+    const response = await apiClient.get('/rooms', {
       params: {
         page_id: lazyParams.value.page,
         page_size: lazyParams.value.rows,

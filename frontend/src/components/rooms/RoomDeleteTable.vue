@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref, watch } from 'vue'
 import axios from 'axios'
+import { apiClient } from '@/client'
 import { useRouter } from 'vue-router'
 import Card from 'primevue/card'
 import Button from 'primevue/button'
@@ -9,8 +10,6 @@ import Column from 'primevue/column'
 import Toast from 'primevue/toast'
 import { useToast } from 'primevue/usetoast'
 import store from '@/store'
-
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
 
 interface ManagedRoom {
   id: number
@@ -43,11 +42,6 @@ const lazyParams = ref({
   rows: 5,
 })
 
-const getAuthHeaders = () => {
-  const token = localStorage.getItem('accesstoken')
-  return token ? { Authorization: `Bearer ${token}` } : null
-}
-
 const forceLogin = (reason: 'missing' | 'expired') => {
   localStorage.removeItem('accesstoken')
   store.clearUser()
@@ -55,7 +49,8 @@ const forceLogin = (reason: 'missing' | 'expired') => {
 }
 
 const ensureToken = () => {
-  if (getAuthHeaders()) {
+  const token = localStorage.getItem('accesstoken')
+  if (token) {
     return true
   }
   forceLogin('missing')
@@ -77,13 +72,11 @@ const loadLazyData = async () => {
 
   loadingList.value = true
   try {
-    const headers = getAuthHeaders()
-    const response = await axios.get<{ rooms: ManagedRoom[]; total: number }>(`${API_BASE}/rooms`, {
+    const response = await apiClient.get<{ rooms: ManagedRoom[]; total: number }>('/rooms', {
       params: {
         page_id: lazyParams.value.page,
         page_size: lazyParams.value.rows,
       },
-      headers: headers ?? {},
     })
 
     managedRooms.value = response.data.rooms
@@ -107,10 +100,7 @@ const handleDeleteRoom = async (room: ManagedRoom) => {
 
   deletingId.value = room.id
   try {
-    const headers = getAuthHeaders()
-    await axios.delete(`${API_BASE}/rooms/${room.id}`, {
-      headers: headers ?? {},
-    })
+    await apiClient.delete(`/rooms/${room.id}`)
 
     toast.add({ severity: 'success', summary: '删除成功', detail: room.name, life: 3000 })
 

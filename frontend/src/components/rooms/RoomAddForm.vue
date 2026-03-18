@@ -1,14 +1,13 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import axios from 'axios'
+import { apiClient } from '@/client'
 import Card from 'primevue/card'
 import Select from 'primevue/select'
 import Button from 'primevue/button'
 import Toast from 'primevue/toast'
 import { useToast } from 'primevue/usetoast'
 import { useRouter } from 'vue-router'
-
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
 
 interface AreaItem { id: string; areaName: string }
 interface BuildingItem { buildingCode: string; buildingName: string }
@@ -51,18 +50,14 @@ const isReady = computed(
   () => !!(selectedArea.value && selectedBuilding.value && selectedFloor.value && selectedRoom.value),
 )
 
-const getAuthHeaders = () => {
-  const token = localStorage.getItem('accesstoken')
-  return token ? { Authorization: `Bearer ${token}` } : null
-}
-
 const forceLogin = (reason: 'missing' | 'expired') => {
   localStorage.removeItem('accesstoken')
   router.replace({ path: '/login', query: { redirect: props.redirectPath, auth: reason } })
 }
 
 const ensureToken = () => {
-  if (getAuthHeaders()) {
+  const token = localStorage.getItem('accesstoken')
+  if (token) {
     return true
   }
   forceLogin('missing')
@@ -84,10 +79,7 @@ const fetchAreas = async () => {
 
   loadingAreas.value = true
   try {
-    const headers = getAuthHeaders()
-    const { data } = await axios.get(`${API_BASE}/proxy/areas`, {
-      headers: headers ?? {},
-    })
+    const { data } = await apiClient.get('/proxy/areas')
     areas.value = (data.rows ?? []) as AreaItem[]
   } catch (error: unknown) {
     handleAuthError(error, '获取校区失败')
@@ -101,10 +93,8 @@ const fetchBuildings = async (areaId: string) => {
 
   loadingBuildings.value = true
   try {
-    const headers = getAuthHeaders()
-    const { data } = await axios.get(`${API_BASE}/proxy/buildings`, {
+    const { data } = await apiClient.get('/proxy/buildings', {
       params: { areaId },
-      headers: headers ?? {},
     })
     buildings.value = (data.rows ?? []) as BuildingItem[]
   } catch (error: unknown) {
@@ -119,10 +109,8 @@ const fetchFloors = async (areaId: string, buildingCode: string) => {
 
   loadingFloors.value = true
   try {
-    const headers = getAuthHeaders()
-    const { data } = await axios.get(`${API_BASE}/proxy/floors`, {
+    const { data } = await apiClient.get('/proxy/floors', {
       params: { areaId, buildingCode },
-      headers: headers ?? {},
     })
     floors.value = (data.rows ?? []) as FloorItem[]
   } catch (error: unknown) {
@@ -137,10 +125,8 @@ const fetchRooms = async (areaId: string, buildingCode: string, floorCode: strin
 
   loadingRooms.value = true
   try {
-    const headers = getAuthHeaders()
-    const { data } = await axios.get(`${API_BASE}/proxy/rooms`, {
+    const { data } = await apiClient.get('/proxy/rooms', {
       params: { areaId, buildingCode, floorCode },
-      headers: headers ?? {},
     })
     rooms.value = (data.rows ?? []) as RoomItem[]
   } catch (error: unknown) {
@@ -183,31 +169,25 @@ const handleAddRoom = async () => {
 
   submitting.value = true
   try {
-    const headers = getAuthHeaders()
-    const surplusResp = await axios.get(`${API_BASE}/proxy/room-surplus`, {
+    const surplusResp = await apiClient.get('/proxy/room-surplus', {
       params: {
         areaId: selectedArea.value!.id,
         buildingCode: selectedBuilding.value!.buildingCode,
         floorCode: selectedFloor.value!.floorCode,
         roomCode: selectedRoom.value!.roomCode,
       },
-      headers: headers ?? {},
     })
 
     const displayName: string =
       surplusResp.data?.data?.displayRoomName ?? selectedRoom.value!.roomName
 
-    await axios.post(
-      `${API_BASE}/rooms`,
-      {
-        name: displayName,
-        area_id: selectedArea.value!.id,
-        building_code: selectedBuilding.value!.buildingCode,
-        floor_code: selectedFloor.value!.floorCode,
-        room_code: selectedRoom.value!.roomCode,
-      },
-      { headers: headers ?? {} },
-    )
+    await apiClient.post('/rooms', {
+      name: displayName,
+      area_id: selectedArea.value!.id,
+      building_code: selectedBuilding.value!.buildingCode,
+      floor_code: selectedFloor.value!.floorCode,
+      room_code: selectedRoom.value!.roomCode,
+    })
 
     toast.add({ severity: 'success', summary: '添加成功', detail: displayName, life: 3000 })
     selectedArea.value = null

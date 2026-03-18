@@ -7,6 +7,7 @@ import FloatLabel from 'primevue/floatlabel'
 import Button from 'primevue/button'
 import { computed, ref } from 'vue'
 import axios from 'axios'
+import { apiClient } from '@/client'
 import type { User } from '@/types/user'
 import store from '@/store'
 import { useToast } from 'primevue/usetoast'
@@ -29,7 +30,7 @@ const route = useRoute()
 
 const handleLogin = async () => {
   try {
-    const response = await axios.post<LoginResponse>('http://localhost:8080/users/login', {
+    const response = await apiClient.post<LoginResponse>('/users/login', {
       username: username.value,
       password: password.value,
     })

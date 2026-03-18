@@ -98,6 +98,7 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import axios from 'axios'
+import { apiClient } from '@/client'
 import * as echarts from 'echarts'
 import dayjs, { Dayjs } from 'dayjs'
 import Card from 'primevue/card'
@@ -128,8 +129,6 @@ interface LatestBalanceResponse {
   balance: number
   recorded_at: string
 }
-
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
 const route = useRoute()
 const roomId = Number(route.params.id)
 
@@ -305,15 +304,15 @@ const updateChart = () => {
 
 const fetchRoomInfo = async () => {
   // 房间基本信息来自 GET /rooms/:id
-  const response = await axios.get<RoomInfo>(`${API_BASE}/rooms/${roomId}`)
+  const response = await apiClient.get<RoomInfo>(`/rooms/${roomId}`)
   roomInfo.value = response.data
 }
 
 const fetchLatestBalance = async () => {
   // 当前最新余额来自 GET /electricity-balances/latest/:room_id
   // 后端返回的 balance 是 int64（分），除以 100 转为元，再保留两位小数
-  const response = await axios.get<LatestBalanceResponse>(
-    `${API_BASE}/electricity-balances/latest/${roomId}`,
+  const response = await apiClient.get<LatestBalanceResponse>(
+    `/electricity-balances/latest/${roomId}`,
   )
   latestBalance.value = round2(response.data.balance / 100)
 }
@@ -324,8 +323,8 @@ const loadUsageData = async (start: string, end: string) => {
 
   try {
     // 用电区间来自 GET /electricity-balances/hour-range/:room_id
-    const response = await axios.get<ElectricityUsage[]>(
-      `${API_BASE}/electricity-balances/hour-range/${roomId}`,
+    const response = await apiClient.get<ElectricityUsage[]>(
+      `/electricity-balances/hour-range/${roomId}`,
       {
         params: {
           start_time: start,

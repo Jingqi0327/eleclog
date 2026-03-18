@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
+import { apiClient } from '@/client'
 import Button from 'primevue/button'
 import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'
@@ -11,8 +12,6 @@ import Toast from 'primevue/toast'
 import { useToast } from 'primevue/usetoast'
 import store from '@/store'
 import type { User } from '@/types/user'
-
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
 
 interface UpdateUserApiResponse {
   user: {
@@ -117,9 +116,7 @@ const submitUpdate = async () => {
       payload.password = password.value
     }
 
-    const { data } = await axios.put<UpdateUserApiResponse>(`${API_BASE}/users`, payload, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    const { data } = await apiClient.put<UpdateUserApiResponse>('/users', payload)
 
     const updatedUser: User = {
       username: data.user.username,
