@@ -11,6 +11,9 @@ import (
 	_ "github.com/Jingqi0327/eleclog/testdata"
 	"github.com/Jingqi0327/eleclog/util"
 	_ "github.com/lib/pq"
+	"github.com/golang-migrate/migrate/v4"
+  	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 )
 
 func main() {
@@ -25,6 +28,7 @@ func main() {
 	}
 
 	store := db.NewStore(conn)
+	runMigrate(config.MigrationURL, config.DBSource)
 	addDefaultUser(config, store)
 
 	go runCollector(config, store)
@@ -82,4 +86,21 @@ func addDefaultUser(config util.Config, store db.Store) {
 			log.Printf("默认用户已创建:\n Username: %s\n Password: %s", config.Username, config.Password)
 		}
 	}
+}
+
+// 这里是运行数据库迁移的代码
+func runMigrate(migrationURL string, dbSource string) {
+	// 1. 创建一个新的迁移实例
+	migration, err := migrate.New(migrationURL, dbSource)
+	if err != nil {
+		log.Fatal("cannot create new migration instance:", err)
+	}
+
+	// 2. 执行迁移
+	err = migration.Up()
+	if err != nil && err != migrate.ErrNoChange {
+		log.Fatal("cannot run migration:", err)
+	}
+
+	log.Println("db migrated successfully")
 }
