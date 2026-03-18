@@ -1,0 +1,42 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:alpine3.23
+    container_name: eleclog-postgres
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: "123456"
+      POSTGRES_DB: elec_log
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/18/docker
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: eleclog-api
+    environment:
+      DB_SOURCE: postgresql://root:123456@postgres:5432/elec_log?sslmode=disable
+      HTTP_SERVER_ADDRESS: 0.0.0.0:8080
+    ports:
+      - "8081:8080"
+    depends_on:
+      - postgres
+    entrypoint: ["/app/wait-for.sh", "postgres:5432", "--", "/app/start.sh"]
+    command: ["/app/main"]
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: eleclog-frontend
+    ports:
+      - "8080:8080"
+    depends_on:
+      - api
+
+volumes:
+  postgres_data:
