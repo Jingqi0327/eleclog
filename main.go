@@ -8,12 +8,14 @@ import (
 	"github.com/Jingqi0327/eleclog/api"
 	"github.com/Jingqi0327/eleclog/collector"
 	db "github.com/Jingqi0327/eleclog/db/sqlc"
+	"github.com/Jingqi0327/eleclog/mail"
 	_ "github.com/Jingqi0327/eleclog/testdata"
 	"github.com/Jingqi0327/eleclog/util"
-	_ "github.com/lib/pq"
+	"github.com/Jingqi0327/eleclog/worker"
 	"github.com/golang-migrate/migrate/v4"
-  	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
+	_ "github.com/lib/pq"
 )
 
 func main() {
@@ -32,7 +34,7 @@ func main() {
 	addDefaultUser(config, store)
 
 	go runCollector(config, store)
-
+	go runMailAlerter(config, store)
 	runGinServer(config, store)
 	//testdata.Insert_data(store)
 }
@@ -103,4 +105,11 @@ func runMigrate(migrationURL string, dbSource string) {
 	}
 
 	log.Println("db migrated successfully")
+}
+
+func runMailAlerter(config util.Config, store db.Store) {
+	mailer := mail.NewQQmailSender(config.EmailSenderName, config.EmailSenderAddress, config.EmailSenderPassword)
+	alerter := worker.NewMailAlerter(store, mailer)
+	alerter.Start()
+	//alerter.RunNow()
 }
