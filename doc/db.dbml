@@ -44,7 +44,7 @@ Table user_room_notifications as URN {
   room_id bigint [not null]
   threshold int [not null, default: 10, note: '预警阈值，单位: 元']
   is_enabled boolean [not null, default: true]
-  last_notified_at timestamptz [note: '上次发送邮件的时间']
+  last_notified_at timestamptz [not null, default: '0001-01-01', note: '上次发送邮件的时间']
   
   Indexes {
     (username, room_id) [pk] // 复合主键，防止重复订阅

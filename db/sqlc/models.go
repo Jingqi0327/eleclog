@@ -5,7 +5,6 @@
 package db
 
 import (
-	"database/sql"
 	"time"
 )
 
@@ -43,5 +42,5 @@ type UserRoomNotification struct {
 	Threshold int32 `json:"threshold"`
 	IsEnabled bool  `json:"is_enabled"`
 	// 上次发送邮件的时间
-	LastNotifiedAt sql.NullTime `json:"last_notified_at"`
+	LastNotifiedAt time.Time `json:"last_notified_at"`
 }

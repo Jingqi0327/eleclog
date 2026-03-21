@@ -3,7 +3,7 @@ CREATE TABLE "user_room_notifications" (
 	"room_id" bigint NOT NULL,
 	"threshold" int NOT NULL DEFAULT 10,
 	"is_enabled" boolean NOT NULL DEFAULT true,
-	"last_notified_at" timestamptz,
+	"last_notified_at" timestamptz NOT NULL DEFAULT '0001-01-01',
 	PRIMARY KEY ("username", "room_id")
 );
 

@@ -11,6 +11,8 @@ import (
 type Querier interface {
 	// 统计寝室总数
 	CountRooms(ctx context.Context) (int64, error)
+	// 统计通知订阅总数
+	CountUserRoomNotifications(ctx context.Context) (int64, error)
 	// 查询用户个数
 	CountUsers(ctx context.Context) (int64, error)
 	// 插入一条电费记录
@@ -21,8 +23,12 @@ type Querier interface {
 	CreateRoom(ctx context.Context, arg CreateRoomParams) (Room, error)
 	//创建用户
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
+	// 创建用户-寝室通知订阅
+	CreateUserRoomNotification(ctx context.Context, arg CreateUserRoomNotificationParams) (UserRoomNotification, error)
 	// 删除寝室信息
 	DeleteRoom(ctx context.Context, id int64) error
+	// 删除通知订阅
+	DeleteUserRoomNotification(ctx context.Context, arg DeleteUserRoomNotificationParams) error
 	// 获取最新的余额记录
 	GetLatestBalance(ctx context.Context, roomID int64) (ElectricityRecord, error)
 	// 获取指定时间范围内的每小时记录
@@ -31,14 +37,28 @@ type Querier interface {
 	GetRoom(ctx context.Context, id int64) (Room, error)
 	//查询单个用户
 	GetUser(ctx context.Context, username string) (User, error)
+	// 查询单个通知订阅
+	GetUserRoomNotification(ctx context.Context, arg GetUserRoomNotificationParams) (UserRoomNotification, error)
+	// 查询需要发送通知的订阅（开启且上次通知时间超过 24 小时）
+	ListDueUserRoomNotifications(ctx context.Context) ([]ListDueUserRoomNotificationsRow, error)
 	// 分页查询所有寝室信息
 	ListRooms(ctx context.Context, arg ListRoomsParams) ([]Room, error)
 	// 查询所有寝室信息
 	ListRoomsAll(ctx context.Context) ([]Room, error)
+	// 分页查询通知订阅
+	ListUserRoomNotifications(ctx context.Context, arg ListUserRoomNotificationsParams) ([]UserRoomNotification, error)
+	// 查询某个寝室的全部通知订阅
+	ListUserRoomNotificationsByRoom(ctx context.Context, roomID int64) ([]UserRoomNotification, error)
+	// 查询某个用户的全部通知订阅
+	ListUserRoomNotificationsByUser(ctx context.Context, username string) ([]UserRoomNotification, error)
 	// 更新寝室信息
 	UpdateRoom(ctx context.Context, arg UpdateRoomParams) (Room, error)
 	//更新用户信息
 	UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error)
+	// 更新通知阈值和开关
+	UpdateUserRoomNotification(ctx context.Context, arg UpdateUserRoomNotificationParams) (UserRoomNotification, error)
+	// 更新最后通知时间
+	UpdateUserRoomNotificationLastNotifiedAt(ctx context.Context, arg UpdateUserRoomNotificationLastNotifiedAtParams) (UserRoomNotification, error)
 }
 
 var _ Querier = (*Queries)(nil)
