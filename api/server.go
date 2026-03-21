@@ -41,7 +41,7 @@ func (server *Server) setupRouter() {
 		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
 		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
 		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
-		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, DELETE")
+		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, PATCH, DELETE")
 
 		if c.Request.Method == "OPTIONS" {
 			c.AbortWithStatus(204)
@@ -55,11 +55,11 @@ func (server *Server) setupRouter() {
 	authRoutes.POST("/rooms", server.createRoom)
 	authRoutes.DELETE("/rooms/:id", server.deleteRoom)
 	authRoutes.POST("/users", server.createUser)
-	authRoutes.PUT("/users", server.UpdateUser)
+	authRoutes.PATCH("/users", server.UpdateUser)
 	authRoutes.POST("/notifications", server.createUserRoomNotification)
 	authRoutes.GET("/notifications", server.listUserRoomNotifications)
 	authRoutes.GET("/notifications/:room_id", server.getUserRoomNotification)
-	authRoutes.PUT("/notifications/:room_id", server.updateUserRoomNotification)
+	authRoutes.PATCH("/notifications/:room_id", server.updateUserRoomNotification)
 	authRoutes.DELETE("/notifications/:room_id", server.deleteUserRoomNotification)
 	// 代理路由：转发到 xiaofubao 外部 API
 	authRoutes.GET("/proxy/areas", server.proxyQueryArea)

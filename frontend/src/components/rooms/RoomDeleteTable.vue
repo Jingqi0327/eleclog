@@ -135,34 +135,57 @@ onMounted(() => {
       房间列表
     </template>
     <template #content>
-      <DataTable
-        :value="managedRooms"
-        lazy
-        paginator
-        :rows="lazyParams.rows"
-        :rowsPerPageOptions="[5, 10, 20]"
-        :totalRecords="totalRecords"
-        :loading="loadingList"
-        @page="onPage($event)"
-        dataKey="id"
-        scrollable
-        scrollHeight="calc(100vh - 280px)"
-      >
-        <Column field="id" header="ID" style="width: 18%" />
-        <Column field="name" header="房间名称" />
-        <Column header="操作" style="width: 30%">
-          <template #body="slotProps">
-            <Button
-              label="删除"
-              icon="pi pi-trash"
-              severity="danger"
-              text
-              :loading="deletingId === slotProps.data.id"
-              @click="handleDeleteRoom(slotProps.data)"
-            />
-          </template>
-        </Column>
-      </DataTable>
+      <div class="list-table-wrap">
+        <DataTable
+          :value="managedRooms"
+          class="list-table"
+          lazy
+          paginator
+          paginatorPosition="bottom"
+          :rows="lazyParams.rows"
+          :rowsPerPageOptions="[5, 10, 20]"
+          :totalRecords="totalRecords"
+          :loading="loadingList"
+          @page="onPage($event)"
+          dataKey="id"
+          scrollable
+          scrollHeight="flex"
+        >
+          <Column field="id" header="ID" style="width: 18%" />
+          <Column field="name" header="房间名称" />
+          <Column header="操作" style="width: 30%">
+            <template #body="slotProps">
+              <Button
+                label="删除"
+                icon="pi pi-trash"
+                severity="danger"
+                text
+                :loading="deletingId === slotProps.data.id"
+                @click="handleDeleteRoom(slotProps.data)"
+              />
+            </template>
+          </Column>
+        </DataTable>
+      </div>
     </template>
   </Card>
 </template>
+
+<style scoped>
+.list-card {
+  height: 100%;
+  width: 100%;
+}
+
+.list-table-wrap {
+  height: 24rem;
+}
+
+.list-table {
+  height: 100%;
+}
+
+.list-table :deep(.p-datatable-table-container) {
+  flex: 1;
+}
+</style>

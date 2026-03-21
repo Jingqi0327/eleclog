@@ -292,6 +292,11 @@ onMounted(() => {
 </template>
 
 <style scoped>
+.form-card {
+  height: 100%;
+  width: 100%;
+}
+
 .form-label {
   font-size: 0.9rem;
   font-weight: 500;

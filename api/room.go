@@ -109,7 +109,7 @@ func (server *Server) getRoom(ctx *gin.Context) {
 
 type listRoomsRequest struct {
 	PageID   int32 `form:"page_id" binding:"required,min=1"`
-	PageSize int32 `form:"page_size" binding:"required,min=1,max=20"`
+	PageSize int32 `form:"page_size" binding:"required,min=1,max=50"`
 }
 
 type listRoomsResponse struct {

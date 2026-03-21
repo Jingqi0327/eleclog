@@ -6,6 +6,7 @@ import store from '@/store'
 import UserProfileMenu from '@/components/UserProfileMenu.vue'
 import RoomAddForm from '@/components/rooms/RoomAddForm.vue'
 import RoomDeleteTable from '@/components/rooms/RoomDeleteTable.vue'
+import RoomNotificationThresholdManager from '@/components/rooms/RoomNotificationThresholdManager.vue'
 
 const router = useRouter()
 const refreshToken = ref(0)
@@ -41,8 +42,15 @@ const handleLogout = async () => {
     </div>
 
     <div class="management-grid">
-      <RoomDeleteTable :refreshToken="refreshToken" />
-      <RoomAddForm redirectPath="/rooms/manage" @added="handleRoomAdded" />
+      <div class="grid-item">
+        <RoomDeleteTable :refreshToken="refreshToken" />
+      </div>
+      <div class="grid-item">
+        <RoomNotificationThresholdManager :refreshToken="refreshToken" />
+      </div>
+      <div class="grid-item">
+        <RoomAddForm redirectPath="/rooms/manage" @added="handleRoomAdded" />
+      </div>
     </div>
   </div>
 </template>
@@ -80,9 +88,18 @@ const handleLogout = async () => {
 
 .management-grid {
   display: grid;
-  grid-template-columns: 1.2fr 1fr;
+  grid-template-columns: 2fr 2fr 1fr;
   gap: 1rem;
-  align-items: start;
+  align-items: stretch;
+}
+
+.grid-item {
+  display: flex;
+  min-width: 0;
+}
+
+.grid-item > * {
+  width: 100%;
 }
 
 @media (max-width: 1024px) {
