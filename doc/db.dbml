@@ -5,7 +5,7 @@ Project eleclog {
   '''
 }
 
-Table rooms {
+Table rooms as R {
   id bigserial [pk, increment] // 主键 ID
   name varchar [not null] // 寝室名称，例如 "302室"
   area_id varchar [not null] // API 参数：区域 ID
@@ -18,8 +18,8 @@ Table rooms {
 }
 
 Table electricity_records {
-  id bigint [pk, increment]
-  room_id bigint [not null, ref: > rooms.id] // 外键，关联 rooms 表
+  id bigserial [pk, increment]
+  room_id bigint [not null] // 外键，关联 rooms 表
   balance bigint [not null] // 当前剩余金额,单位分
   recorded_at timestamptz [not null, default: `now()`]
 
@@ -32,9 +32,25 @@ Table electricity_records {
 }
 
 Table users as U {
-  username varchar [pk]
+  username varchar [pk, not null]
   hashed_password varchar [not null]
   full_name varchar [not null]
   email varchar [unique, not null]
   created_at timestamptz [not null, default: `now()`]
 }
+
+Table user_room_notifications as URN {
+  username varchar [not null]
+  room_id bigint [not null]
+  threshold int [not null, default: 10, note: '预警阈值，单位: 元']
+  is_enabled boolean [not null, default: true]
+  last_notified_at timestamptz [note: '上次发送邮件的时间']
+  
+  Indexes {
+    (username, room_id) [pk] // 复合主键，防止重复订阅
+  }
+}
+
+Ref: electricity_records.room_id > rooms.id [delete: cascade]
+Ref: user_room_notifications.username > users.username [delete: cascade]
+Ref: user_room_notifications.room_id > rooms.id [delete: cascade]

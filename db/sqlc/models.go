@@ -5,6 +5,7 @@
 package db
 
 import (
+	"database/sql"
 	"time"
 )
 
@@ -33,4 +34,14 @@ type User struct {
 	FullName       string    `json:"full_name"`
 	Email          string    `json:"email"`
 	CreatedAt      time.Time `json:"created_at"`
+}
+
+type UserRoomNotification struct {
+	Username string `json:"username"`
+	RoomID   int64  `json:"room_id"`
+	// 预警阈值，单位: 元
+	Threshold int32 `json:"threshold"`
+	IsEnabled bool  `json:"is_enabled"`
+	// 上次发送邮件的时间
+	LastNotifiedAt sql.NullTime `json:"last_notified_at"`
 }
