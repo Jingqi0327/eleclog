@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>管理 — ElecLog</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0f1117; --surface: #1a1d27; --surface2: #22263a;
+      --border: #2d3148; --accent: #4f9cf9; --accent-hover: #6aaeff;
+      --green: #34d399; --yellow: #fbbf24; --red: #f87171; --orange: #fb923c;
+      --text: #e8eaf6; --text-muted: #8890b0; --radius: 14px;
+    }
+    body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+    header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0.9rem 1.5rem; border-bottom: 1px solid var(--border);
+      background: rgba(26,29,39,0.9); backdrop-filter: blur(12px);
+      position: sticky; top: 0; z-index: 100;
+    }
+    .logo { display: flex; align-items: center; gap: 0.6rem; }
+    .logo-icon { width: 30px; height: 30px; background: linear-gradient(135deg,var(--accent),#818cf8); border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; }
+    .logo-name { font-size: 1rem; font-weight: 700; }
+    .nav-btns { display: flex; gap: 0.5rem; align-items: center; }
+    .btn {
+      border-radius: 8px; padding: 0.4rem 0.9rem; font-size: 0.82rem; font-family: inherit;
+      cursor: pointer; transition: all 0.15s; border: 1px solid var(--border); background: none; color: var(--text-muted);
+      text-decoration: none; display: inline-flex; align-items: center; gap: 0.35rem;
+    }
+    .btn:hover { border-color: var(--accent); color: var(--accent); }
+    .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .btn.primary:hover { background: var(--accent-hover); }
+    .btn.danger { border-color: var(--red); color: var(--red); }
+    .btn.danger:hover { background: rgba(248,113,113,0.1); }
+    .btn.success { border-color: var(--green); color: var(--green); }
+    .btn.success:hover { background: rgba(52,211,153,0.1); }
+    .btn.orange { border-color: var(--orange); color: var(--orange); }
+    .btn.orange:hover { background: rgba(251,146,60,0.1); }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    main { max-width: 1100px; margin: 0 auto; padding: 1.5rem; display: flex; flex-direction: column; gap: 1.5rem; }
+    h1 { font-size: 1.4rem; font-weight: 700; }
+    h2 { font-size: 1rem; font-weight: 600; }
+    /* 卡片 */
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem 1.4rem; }
+    .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
+    /* 表格 */
+    table { width: 100%; border-collapse: collapse; font-size: 0.87rem; }
+    th { color: var(--text-muted); font-weight: 500; text-align: left; padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--border); }
+    td { padding: 0.6rem 0.75rem; border-bottom: 1px solid rgba(45,49,72,0.5); vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255,255,255,0.02); }
+    .actions { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+    /* 标签 */
+    .badge { display: inline-block; padding: 0.2rem 0.55rem; border-radius: 999px; font-size: 0.75rem; font-weight: 500; }
+    .badge-blue { background: rgba(79,156,249,0.15); color: var(--accent); }
+    .badge-green { background: rgba(52,211,153,0.15); color: var(--green); }
+    .badge-gray { background: rgba(136,144,176,0.15); color: var(--text-muted); }
+    .badge-red { background: rgba(248,113,113,0.15); color: var(--red); }
+    /* 添加房间表单 */
+    .form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.75rem; align-items: end; }
+    .field label { display: block; font-size: 0.78rem; color: var(--text-muted); margin-bottom: 0.3rem; }
+    select, input[type="number"] {
+      width: 100%; background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 8px; padding: 0.55rem 0.75rem; color: var(--text); font-size: 0.85rem;
+      font-family: inherit; outline: none; transition: border-color 0.2s;
+    }
+    select:focus, input[type="number"]:focus { border-color: var(--accent); }
+    select:disabled, input[type="number"]:disabled { opacity: 0.4; cursor: not-allowed; }
+    option { background: var(--surface2); }
+    /* 弹窗 */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 999;
+      display: flex; align-items: center; justify-content: center; padding: 1rem;
+      display: none;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem; width: 100%; max-width: 420px; }
+    .modal h3 { margin-bottom: 1.1rem; font-size: 1rem; }
+    .modal .field { margin-bottom: 0.9rem; }
+    .modal-footer { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.25rem; }
+    /* 消息提示 */
+    .toast-container { position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 9999; display: flex; flex-direction: column; gap: 0.5rem; }
+    .toast {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+      padding: 0.7rem 1rem; font-size: 0.85rem; min-width: 220px; max-width: 340px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.4); animation: slideIn 0.2s ease;
+    }
+    .toast.success { border-left: 3px solid var(--green); }
+    .toast.error   { border-left: 3px solid var(--red); }
+    .toast.info    { border-left: 3px solid var(--accent); }
+    @keyframes slideIn { from { transform: translateX(30px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    .empty-row { text-align: center; color: var(--text-muted); padding: 2rem 0; }
+    @media (max-width: 700px) { .form-grid { grid-template-columns: 1fr 1fr; } }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">
+      <div class="logo-icon">⚡</div>
+      <span class="logo-name">ElecLog 管理</span>
+    </div>
+    <div class="nav-btns">
+      <a class="btn" href="index.html">← 返回首页</a>
+      <button class="btn danger" onclick="logout()">退出登录</button>
+    </div>
+  </header>
+
+  <main>
+    <h1>系统管理</h1>
+
+    <!-- 房间列表 + 操作 -->
+    <div class="card">
+      <div class="card-header">
+        <h2>房间列表</h2>
+        <button class="btn primary" onclick="refreshRooms()">刷新</button>
+      </div>
+      <table id="roomTable">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>名称</th>
+            <th>告警阈值</th>
+            <th>状态</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody id="roomTableBody">
+          <tr><td colspan="5" class="empty-row">加载中…</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 添加新房间 -->
+    <div class="card">
+      <div class="card-header"><h2>添加监控房间</h2></div>
+      <div class="form-grid">
+        <div class="field">
+          <label>校区</label>
+          <select id="selArea" onchange="onAreaChange()"><option value="">请选择校区</option></select>
+        </div>
+        <div class="field">
+          <label>楼栋</label>
+          <select id="selBuilding" disabled onchange="onBuildingChange()"><option value="">请先选择校区</option></select>
+        </div>
+        <div class="field">
+          <label>楼层</label>
+          <select id="selFloor" disabled onchange="onFloorChange()"><option value="">请先选择楼栋</option></select>
+        </div>
+        <div class="field">
+          <label>房间</label>
+          <select id="selRoom" disabled><option value="">请先选择楼层</option></select>
+        </div>
+        <div class="field" style="display:flex;align-items:flex-end">
+          <button class="btn primary" id="addRoomBtn" onclick="addRoom()" disabled style="width:100%;justify-content:center">添加房间</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- 阈值配置弹窗 -->
+  <div class="modal-overlay" id="thresholdModal">
+    <div class="modal">
+      <h3>设置告警阈值</h3>
+      <div class="field">
+        <label>房间</label>
+        <div id="modalRoomName" style="padding: 0.5rem 0; font-weight:600; color:var(--accent)"></div>
+      </div>
+      <div class="field">
+        <label>告警阈值（元）</label>
+        <input type="number" id="thresholdInput" min="0" max="9999" step="0.01" placeholder="输入余额阈值，低于此值时邮件告警" />
+      </div>
+      <div class="field" id="enabledField" style="display:none">
+        <label>启用状态</label>
+        <div style="display:flex; gap:0.5rem; margin-top:0.3rem">
+          <button class="btn" id="toggleEnabledBtn" onclick="toggleEnabled()"></button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" onclick="closeModal()">取消</button>
+        <button class="btn primary" id="saveThresholdBtn" onclick="saveThreshold()">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 导入数据弹窗 -->
+  <div class="modal-overlay" id="importModal">
+    <div class="modal">
+      <h3>导入历史数据</h3>
+      <div style="color:var(--text-muted);font-size:0.83rem;margin-bottom:0.9rem">
+        选择历史抓取的 JSON 文件（格式：<code>[{"timestamp":"...","surplus":...}]</code>）<br/>
+        系统会自动跳过已存在的数据，支持重复导入。
+      </div>
+      <div class="field">
+        <label>房间</label>
+        <div id="importRoomName" style="padding: 0.4rem 0; font-weight:600; color:var(--accent)"></div>
+      </div>
+      <div class="field">
+        <label>JSON 文件</label>
+        <input type="file" id="importFile" accept=".json"
+          style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:0.5rem;color:var(--text);width:100%;font-size:0.85rem;cursor:pointer" />
+      </div>
+      <div id="importResult" style="display:none; margin-top:0.5rem; padding:0.6rem 0.8rem; border-radius:8px; font-size:0.83rem;"></div>
+      <div class="modal-footer">
+        <button class="btn" onclick="closeImportModal()">关闭</button>
+        <button class="btn primary" id="importBtn" onclick="doImport()">开始导入</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script>
+    const API = window.location.origin.includes('localhost') || window.location.protocol === 'file:'
+      ? 'http://localhost:8080'
+      : '/api';
+
+    // 鉴权相关
+    function getAuthHeaders() {
+      const token = localStorage.getItem('accesstoken');
+      if (!token) {
+        if (!location.href.includes('login.html')) {
+          location.href = `login.html?redirect=manage.html`;
+        }
+        return {};
+      }
+      return { 'Authorization': `Bearer ${token}` };
+    }
+
+    function logout() {
+      localStorage.removeItem('accesstoken');
+      location.href = 'login.html';
+    }
+
+    // Toast 提示
+    function showToast(msg, type = 'info') {
+      const c = document.getElementById('toastContainer');
+      const el = document.createElement('div');
+      el.className = `toast ${type}`;
+      el.textContent = msg;
+      c.appendChild(el);
+      setTimeout(() => el.remove(), 3500);
+    }
+
+    // —— 房间列表 ——
+    let rooms = [];
+    let notifications = {}; // room_id -> notification obj
+
+    async function refreshRooms() {
+      const headers = getAuthHeaders();
+      try {
+        const [rRes, nRes] = await Promise.all([
+          axios.get(`${API}/rooms`, { params: { page_id: 1, page_size: 50 }, headers }),
+          axios.get(`${API}/notifications`, { params: { page_id: 1, page_size: 50 }, headers }).catch(() => ({ data: { notifications: [] } })),
+        ]);
+        rooms = rRes.data.rooms || [];
+        notifications = {};
+        (nRes.data.notifications || []).forEach(n => notifications[n.room_id] = n);
+        renderRoomTable();
+      } catch (e) {
+        showToast('加载房间列表失败', 'error');
+      }
+    }
+
+    function renderRoomTable() {
+      const tbody = document.getElementById('roomTableBody');
+      if (!rooms.length) {
+        tbody.innerHTML = '<tr><td colspan="5" class="empty-row">暂无房间，请先添加</td></tr>';
+        return;
+      }
+      tbody.innerHTML = rooms.map(room => {
+        const notif = notifications[room.id];
+        const thresholdBadge = notif
+          ? `<span class="badge badge-blue">¥ ${(notif.threshold / 100).toFixed(2)}</span>`
+          : `<span class="badge badge-gray">未配置</span>`;
+        const statusBadge = notif
+          ? (notif.is_enabled
+            ? `<span class="badge badge-green">启用</span>`
+            : `<span class="badge badge-red">禁用</span>`)
+          : `<span class="badge badge-gray">—</span>`;
+        return `
+          <tr>
+            <td style="color:var(--text-muted)">#${room.id}</td>
+            <td style="font-weight:500">${room.name}</td>
+            <td>${thresholdBadge}</td>
+            <td>${statusBadge}</td>
+            <td>
+              <div class="actions">
+                <button class="btn" onclick="openThresholdModal(${room.id})">
+                  ${notif ? '编辑阈值' : '设置阈值'}
+                </button>
+                <button class="btn orange" onclick="openImportModal(${room.id})">
+                  导入数据
+                </button>
+                <button class="btn danger" onclick="deleteRoom(${room.id},'${room.name.replace(/'/g,"\\'")}')">
+                  删除
+                </button>
+              </div>
+            </td>
+          </tr>`;
+      }).join('');
+    }
+
+    async function deleteRoom(id, name) {
+      if (!confirm(`确认删除房间：${name}？`)) return;
+      const headers = getAuthHeaders();
+      try {
+        await axios.delete(`${API}/rooms/${id}`, { headers });
+        showToast(`已删除：${name}`, 'success');
+        refreshRooms();
+      } catch (e) {
+        showToast('删除失败：' + (e.response?.data?.error || e.message), 'error');
+      }
+    }
+
+    // —— 添加房间 ——
+    let areaData = [], buildingData = [], floorData = [], roomData = [];
+
+    async function loadAreas() {
+      const headers = getAuthHeaders();
+      try {
+        const r = await axios.get(`${API}/proxy/areas`, { headers });
+        areaData = r.data.rows || [];
+        const sel = document.getElementById('selArea');
+        sel.innerHTML = '<option value="">请选择校区</option>' +
+          areaData.map(a => `<option value="${a.id}">${a.areaName}</option>`).join('');
+      } catch (e) { showToast('加载校区失败', 'error'); }
+    }
+
+    async function onAreaChange() {
+      const areaId = document.getElementById('selArea').value;
+      const bSel = document.getElementById('selBuilding');
+      const fSel = document.getElementById('selFloor');
+      const rSel = document.getElementById('selRoom');
+      bSel.innerHTML = '<option value="">加载中…</option>'; bSel.disabled = true;
+      fSel.innerHTML = '<option value="">请先选择楼栋</option>'; fSel.disabled = true;
+      rSel.innerHTML = '<option value="">请先选择楼层</option>'; rSel.disabled = true;
+      document.getElementById('addRoomBtn').disabled = true;
+      if (!areaId) return;
+      const headers = getAuthHeaders();
+      try {
+        const r = await axios.get(`${API}/proxy/buildings`, { params: { areaId }, headers });
+        buildingData = r.data.rows || [];
+        bSel.innerHTML = '<option value="">请选择楼栋</option>' +
+          buildingData.map(b => `<option value="${b.buildingCode}">${b.buildingName}</option>`).join('');
+        bSel.disabled = false;
+      } catch (e) { showToast('加载楼栋失败', 'error'); bSel.innerHTML = '<option value="">加载失败</option>'; }
+    }
+
+    async function onBuildingChange() {
+      const areaId = document.getElementById('selArea').value;
+      const buildingCode = document.getElementById('selBuilding').value;
+      const fSel = document.getElementById('selFloor');
+      const rSel = document.getElementById('selRoom');
+      fSel.innerHTML = '<option value="">加载中…</option>'; fSel.disabled = true;
+      rSel.innerHTML = '<option value="">请先选择楼层</option>'; rSel.disabled = true;
+      document.getElementById('addRoomBtn').disabled = true;
+      if (!buildingCode) return;
+      const headers = getAuthHeaders();
+      try {
+        const r = await axios.get(`${API}/proxy/floors`, { params: { areaId, buildingCode }, headers });
+        floorData = r.data.rows || [];
+        fSel.innerHTML = '<option value="">请选择楼层</option>' +
+          floorData.map(f => `<option value="${f.floorCode}">${f.floorName}</option>`).join('');
+        fSel.disabled = false;
+      } catch (e) { showToast('加载楼层失败', 'error'); }
+    }
+
+    async function onFloorChange() {
+      const areaId = document.getElementById('selArea').value;
+      const buildingCode = document.getElementById('selBuilding').value;
+      const floorCode = document.getElementById('selFloor').value;
+      const rSel = document.getElementById('selRoom');
+      rSel.innerHTML = '<option value="">加载中…</option>'; rSel.disabled = true;
+      document.getElementById('addRoomBtn').disabled = true;
+      if (!floorCode) return;
+      const headers = getAuthHeaders();
+      try {
+        const r = await axios.get(`${API}/proxy/rooms`, { params: { areaId, buildingCode, floorCode }, headers });
+        roomData = r.data.rows || [];
+        rSel.innerHTML = '<option value="">请选择房间</option>' +
+          roomData.map(rm => `<option value="${rm.roomCode}">${rm.roomName}</option>`).join('');
+        rSel.disabled = false;
+        rSel.onchange = () => { document.getElementById('addRoomBtn').disabled = !rSel.value; };
+      } catch (e) { showToast('加载房间失败', 'error'); }
+    }
+
+    async function addRoom() {
+      const areaId = document.getElementById('selArea').value;
+      const buildingCode = document.getElementById('selBuilding').value;
+      const floorCode = document.getElementById('selFloor').value;
+      const roomCode = document.getElementById('selRoom').value;
+      if (!areaId || !buildingCode || !floorCode || !roomCode) return;
+      const btn = document.getElementById('addRoomBtn');
+      btn.disabled = true; btn.textContent = '添加中…';
+      const headers = getAuthHeaders();
+      try {
+        // 先抓余额获取 displayName
+        const sRes = await axios.get(`${API}/proxy/room-surplus`, {
+          params: { areaId, buildingCode, floorCode, roomCode }, headers
+        });
+        const displayName = sRes.data?.data?.displayRoomName || roomCode;
+        await axios.post(`${API}/rooms`, { name: displayName, area_id: areaId, building_code: buildingCode, floor_code: floorCode, room_code: roomCode }, { headers });
+        showToast(`已添加房间：${displayName}`, 'success');
+        document.getElementById('selArea').value = '';
+        ['selBuilding','selFloor','selRoom'].forEach(id => {
+          const el = document.getElementById(id);
+          el.innerHTML = '<option value="">请先选择上级</option>';
+          el.disabled = true;
+        });
+        refreshRooms();
+      } catch (e) {
+        showToast('添加失败：' + (e.response?.data?.error || e.message), 'error');
+      } finally {
+        btn.textContent = '添加房间';
+        btn.disabled = false;
+      }
+    }
+
+    // —— 告警阈值弹窗 ——
+    let modalRoomId = null;
+    let modalEnabled = true;
+
+    function openThresholdModal(roomId) {
+      modalRoomId = roomId;
+      const room = rooms.find(r => r.id === roomId);
+      const notif = notifications[roomId];
+      document.getElementById('modalRoomName').textContent = room?.name || '';
+      document.getElementById('thresholdInput').value = notif ? (notif.threshold / 100).toFixed(2) : '';
+      const enabledField = document.getElementById('enabledField');
+      if (notif) {
+        modalEnabled = notif.is_enabled;
+        enabledField.style.display = '';
+        updateToggleBtn();
+      } else {
+        enabledField.style.display = 'none';
+        modalEnabled = true;
+      }
+      document.getElementById('thresholdModal').classList.add('open');
+    }
+
+    function updateToggleBtn() {
+      const btn = document.getElementById('toggleEnabledBtn');
+      btn.textContent = modalEnabled ? '✓ 已启用' : '✗ 已禁用';
+      btn.className = 'btn ' + (modalEnabled ? 'success' : 'danger');
+    }
+
+    function toggleEnabled() {
+      modalEnabled = !modalEnabled;
+      updateToggleBtn();
+    }
+
+    function closeModal() {
+      document.getElementById('thresholdModal').classList.remove('open');
+    }
+
+    async function saveThreshold() {
+      const val = parseFloat(document.getElementById('thresholdInput').value);
+      if (isNaN(val) || val < 0) { showToast('请输入有效的阈值', 'error'); return; }
+      const cents = Math.round(val * 100);
+      const existing = notifications[modalRoomId];
+      const btn = document.getElementById('saveThresholdBtn');
+      btn.disabled = true; btn.textContent = '保存中…';
+      const headers = getAuthHeaders();
+      try {
+        if (existing) {
+          await axios.patch(`${API}/notifications/${modalRoomId}`, { threshold: cents, is_enabled: modalEnabled }, { headers });
+          showToast('告警阈值已更新', 'success');
+        } else {
+          await axios.post(`${API}/notifications`, { room_id: modalRoomId, threshold: cents }, { headers });
+          showToast('告警配置已添加', 'success');
+        }
+        closeModal();
+        refreshRooms();
+      } catch (e) {
+        showToast('保存失败：' + (e.response?.data?.error || e.message), 'error');
+      } finally {
+        btn.disabled = false; btn.textContent = '保存';
+      }
+    }
+
+    // —— 导入数据弹窗 ——
+    let importRoomId = null;
+
+    function openImportModal(roomId) {
+      importRoomId = roomId;
+      const room = rooms.find(r => r.id === roomId);
+      document.getElementById('importRoomName').textContent = room?.name || '';
+      document.getElementById('importFile').value = '';
+      const result = document.getElementById('importResult');
+      result.style.display = 'none';
+      document.getElementById('importBtn').disabled = false;
+      document.getElementById('importModal').classList.add('open');
+    }
+
+    function closeImportModal() {
+      document.getElementById('importModal').classList.remove('open');
+    }
+
+    async function doImport() {
+      const fileInput = document.getElementById('importFile');
+      const resultEl = document.getElementById('importResult');
+      if (!fileInput.files.length) { showToast('请先选择 JSON 文件', 'error'); return; }
+      const btn = document.getElementById('importBtn');
+      btn.disabled = true; btn.textContent = '导入中…';
+      resultEl.style.display = 'none';
+      const headers = getAuthHeaders();
+      try {
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0]);
+        const r = await axios.post(`${API}/electricity-balances/import/${importRoomId}`, formData, {
+          headers: { ...headers, 'Content-Type': 'multipart/form-data' }
+        });
+        const { imported, skipped, errors } = r.data;
+        resultEl.style.display = 'block';
+        resultEl.style.background = 'rgba(52,211,153,0.1)';
+        resultEl.style.border = '1px solid rgba(52,211,153,0.3)';
+        resultEl.style.color = 'var(--green)';
+        resultEl.innerHTML = `✓ 导入完成：成功 <strong>${imported}</strong> 条，跳过重复 <strong>${skipped}</strong> 条，失败 <strong>${errors}</strong> 条`;
+        showToast(`导入成功 ${imported} 条`, 'success');
+      } catch (e) {
+        resultEl.style.display = 'block';
+        resultEl.style.background = 'rgba(248,113,113,0.1)';
+        resultEl.style.border = '1px solid rgba(248,113,113,0.3)';
+        resultEl.style.color = 'var(--red)';
+        resultEl.textContent = '导入失败：' + (e.response?.data?.error || e.message);
+        showToast('导入失败', 'error');
+      } finally {
+        btn.disabled = false; btn.textContent = '开始导入';
+      }
+    }
+
+    // 点击遮罩关闭
+    document.getElementById('thresholdModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeModal(); });
+    document.getElementById('importModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeImportModal(); });
+
+    // 初始化
+    refreshRooms();
+    loadAreas();
+  </script>
+</body>
+</html>

@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>登录 — ElecLog</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface2: #22263a;
+      --border: #2d3148;
+      --accent: #4f9cf9;
+      --accent-hover: #6aaeff;
+      --text: #e8eaf6;
+      --text-muted: #8890b0;
+      --danger: #f87171;
+      --radius: 14px;
+    }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-image: radial-gradient(ellipse at 30% 20%, rgba(79,156,249,0.08) 0%, transparent 60%),
+                        radial-gradient(ellipse at 80% 80%, rgba(99,102,241,0.06) 0%, transparent 50%);
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 2.5rem 2rem;
+      width: 100%;
+      max-width: 380px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      margin-bottom: 2rem;
+      justify-content: center;
+    }
+    .logo-icon {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, var(--accent), #818cf8);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.1rem;
+    }
+    .logo-text { font-size: 1.3rem; font-weight: 700; letter-spacing: -0.3px; }
+    .logo-sub { color: var(--text-muted); font-size: 0.75rem; margin-top: 0.1rem; }
+    h2 { font-size: 1.1rem; font-weight: 600; margin-bottom: 1.5rem; color: var(--text-muted); text-align: center; }
+    label { display: block; font-size: 0.8rem; font-weight: 500; color: var(--text-muted); margin-bottom: 0.4rem; }
+    .field { margin-bottom: 1.1rem; }
+    input {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.65rem 0.9rem;
+      color: var(--text);
+      font-size: 0.9rem;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    input:focus { border-color: var(--accent); }
+    .btn {
+      width: 100%;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 0.75rem;
+      font-size: 0.95rem;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      margin-top: 0.5rem;
+      transition: background 0.2s, transform 0.1s;
+    }
+    .btn:hover { background: var(--accent-hover); }
+    .btn:active { transform: scale(0.98); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .error {
+      background: rgba(248,113,113,0.1);
+      border: 1px solid rgba(248,113,113,0.3);
+      border-radius: 8px;
+      color: var(--danger);
+      padding: 0.6rem 0.8rem;
+      font-size: 0.82rem;
+      margin-bottom: 1rem;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">
+      <div class="logo-icon">⚡</div>
+      <div>
+        <div class="logo-text">ElecLog</div>
+        <div class="logo-sub">寝室电费监控系统</div>
+      </div>
+    </div>
+    <h2>账号登录</h2>
+    <div class="error" id="errMsg"></div>
+    <div class="field">
+      <label for="username">用户名</label>
+      <input type="text" id="username" placeholder="请输入用户名" autocomplete="username" />
+    </div>
+    <div class="field">
+      <label for="password">密码</label>
+      <input type="password" id="password" placeholder="请输入密码" autocomplete="current-password" />
+    </div>
+    <button class="btn" id="loginBtn" onclick="doLogin()">登 录</button>
+  </div>
+
+  <script>
+    const API = window.location.origin.includes('localhost') || window.location.protocol === 'file:'
+      ? 'http://localhost:8080'
+      : '/api';
+
+    // 已登录则跳回首页
+    if (localStorage.getItem('accesstoken')) {
+      location.href = 'index.html';
+    }
+
+    document.getElementById('password').addEventListener('keydown', e => {
+      if (e.key === 'Enter') doLogin();
+    });
+
+    async function doLogin() {
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+      const errMsg = document.getElementById('errMsg');
+      const btn = document.getElementById('loginBtn');
+      errMsg.style.display = 'none';
+      if (!username || !password) {
+        errMsg.textContent = '请输入用户名和密码';
+        errMsg.style.display = 'block';
+        return;
+      }
+      btn.disabled = true;
+      btn.textContent = '登录中…';
+      try {
+        const res = await axios.post(`${API}/users/login`, { username, password });
+        localStorage.setItem('accesstoken', res.data.access_token);
+        const redirect = new URLSearchParams(location.search).get('redirect') || 'index.html';
+        location.href = redirect;
+      } catch (e) {
+        errMsg.textContent = e.response?.data?.error || '登录失败，请检查用户名和密码';
+        errMsg.style.display = 'block';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '登 录';
+      }
+    }
+  </script>
+</body>
+</html>

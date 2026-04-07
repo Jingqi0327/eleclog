@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>用电详情 — ElecLog</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface2: #22263a;
+      --border: #2d3148;
+      --accent: #4f9cf9;
+      --accent-hover: #6aaeff;
+      --green: #34d399;
+      --yellow: #fbbf24;
+      --red: #f87171;
+      --purple: #a78bfa;
+      --text: #e8eaf6;
+      --text-muted: #8890b0;
+      --radius: 14px;
+    }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex; flex-direction: column;
+    }
+    header {
+      display: flex; align-items: center; gap: 0.8rem;
+      padding: 0.9rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+      background: rgba(26,29,39,0.9);
+      backdrop-filter: blur(12px);
+    }
+    .back-btn {
+      background: none; border: 1px solid var(--border); color: var(--text-muted);
+      border-radius: 8px; padding: 0.35rem 0.7rem; font-size: 0.82rem; font-family: inherit;
+      cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 0.3rem;
+    }
+    .back-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .header-title { font-weight: 600; font-size: 1rem; }
+    .header-sub { color: var(--text-muted); font-size: 0.8rem; margin-left: auto; }
+    .content { flex: 1; display: flex; flex-direction: column; padding: 1.25rem 1.5rem; min-height: 0; }
+
+    /* 统计卡片 */
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.9rem; margin-bottom: 1rem; }
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem 1.2rem;
+    }
+    .stat-label { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.4rem; display: flex; align-items: center; gap: 0.4rem; }
+    .stat-value { font-size: 1.5rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .stat-value.good { color: var(--green); }
+    .stat-value.warn { color: var(--yellow); }
+    .stat-value.low  { color: var(--red); }
+
+    /* 筛选栏 */
+    .filter-bar {
+      display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.9rem;
+    }
+    .quick-btns { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+    .qbtn {
+      background: var(--surface2); border: 1px solid var(--border); color: var(--text-muted);
+      border-radius: 7px; padding: 0.35rem 0.75rem; font-size: 0.8rem; font-family: inherit;
+      cursor: pointer; transition: all 0.15s;
+    }
+    .qbtn:hover { border-color: var(--accent); color: var(--accent); }
+    .qbtn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .custom-range { display: flex; align-items: center; gap: 0.4rem; }
+    input[type="date"] {
+      background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+      border-radius: 7px; padding: 0.35rem 0.6rem; font-size: 0.8rem; font-family: inherit;
+      outline: none; cursor: pointer;
+    }
+    input[type="date"]:focus { border-color: var(--accent); }
+    .search-btn {
+      background: var(--accent); border: none; color: #fff;
+      border-radius: 7px; padding: 0.35rem 0.85rem; font-size: 0.8rem; font-family: inherit;
+      cursor: pointer; transition: background 0.15s;
+    }
+    .search-btn:hover { background: var(--accent-hover); }
+
+    /* 图表 */
+    .chart-wrap {
+      flex: 1;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      min-height: 320px;
+      position: relative;
+    }
+    #chart { width: 100%; height: 100%; min-height: 320px; }
+    .chart-overlay {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--text-muted); font-size: 0.9rem;
+      border-radius: var(--radius);
+      background: var(--surface);
+    }
+
+    .error-msg {
+      background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.3);
+      border-radius: 8px; color: var(--red); padding: 0.5rem 0.8rem; font-size: 0.82rem; margin-bottom: 0.8rem;
+    }
+    @media (max-width: 600px) {
+      .stats { grid-template-columns: 1fr 1fr; }
+      .filter-bar { flex-direction: column; align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <button class="back-btn" onclick="history.back()">← 返回</button>
+    <span class="header-title" id="headerTitle">房间用电详情</span>
+    <span class="header-sub" id="headerSub"></span>
+  </header>
+
+  <div class="content">
+    <div class="stats">
+      <div class="stat-card">
+        <div class="stat-label">🏠 房间名称</div>
+        <div class="stat-value" id="statRoom" style="font-size:1.1rem">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">💰 当前余额</div>
+        <div class="stat-value" id="statBalance">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">⚡ 区间总用电</div>
+        <div class="stat-value" id="statUsage" style="color:var(--accent)">0.00 度</div>
+      </div>
+    </div>
+
+    <div id="errorMsg" class="error-msg" style="display:none"></div>
+
+    <div class="filter-bar">
+      <div class="quick-btns" id="quickBtns">
+        <button class="qbtn active" data-v="today">今天</button>
+        <button class="qbtn" data-v="yesterday">昨天</button>
+        <button class="qbtn" data-v="this_week">本周</button>
+        <button class="qbtn" data-v="last_week">上周</button>
+        <button class="qbtn" data-v="this_month">本月</button>
+        <button class="qbtn" data-v="last_month">上月</button>
+      </div>
+      <div class="custom-range">
+        <input type="date" id="dateStart" />
+        <span style="color:var(--text-muted);font-size:0.8rem">至</span>
+        <input type="date" id="dateEnd" />
+        <button class="search-btn" onclick="doCustomSearch()">查询</button>
+      </div>
+    </div>
+
+    <div class="chart-wrap">
+      <div class="chart-overlay" id="chartOverlay" style="display:none">暂无数据</div>
+      <div id="chart"></div>
+    </div>
+  </div>
+
+  <script>
+    const API = window.location.origin.includes('localhost') || window.location.protocol === 'file:'
+      ? 'http://localhost:8080'
+      : '/api';
+
+    const params = new URLSearchParams(location.search);
+    const roomId = parseInt(params.get('id') || '0');
+    if (!roomId) { alert('无效的房间 ID'); history.back(); }
+
+    const token = localStorage.getItem('accesstoken');
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
+    let myChart = null;
+    let records = [];
+
+    // ——— ECharts 初始化 ———
+    function initChart() {
+      myChart = echarts.init(document.getElementById('chart'), 'dark');
+      myChart.setOption({
+        backgroundColor: 'transparent',
+        tooltip: { trigger: 'axis', backgroundColor: '#1a1d27', borderColor: '#2d3148', textStyle: { color: '#e8eaf6' } },
+        legend: { data: ['用电量(度)', '余额(元)'], textStyle: { color: '#8890b0' }, top: 8 },
+        grid: { top: 50, bottom: 50, left: 60, right: 70 },
+        xAxis: { type: 'category', data: [], axisLabel: { color: '#8890b0', rotate: 20, fontSize: 11 }, axisLine: { lineStyle: { color: '#2d3148' } } },
+        yAxis: [
+          { type: 'value', name: '度', nameTextStyle: { color: '#8890b0' }, splitLine: { lineStyle: { color: '#2d3148' } }, axisLabel: { color: '#8890b0' } },
+          { type: 'value', name: '元', nameTextStyle: { color: '#8890b0' }, splitLine: { show: false }, axisLabel: { color: '#8890b0' } },
+        ],
+        series: [
+          { name: '用电量(度)', type: 'bar', data: [], itemStyle: { color: '#4f9cf9', borderRadius: [3,3,0,0] }, barMaxWidth: 30 },
+          { name: '余额(元)', type: 'line', yAxisIndex: 1, data: [], smooth: true, lineStyle: { color: '#34d399', width: 2 }, symbol: 'none', areaStyle: { color: { type: 'linear', x:0,y:0,x2:0,y2:1, colorStops:[{offset:0,color:'rgba(52,211,153,0.2)'},{offset:1,color:'transparent'}] } } },
+        ],
+      });
+      window.addEventListener('resize', () => myChart?.resize());
+    }
+
+    // ——— 数据聚合 ———
+    function round2(n) { return Math.round(n * 100) / 100; }
+    function fmtLabel(ms, unit) {
+      const d = new Date(ms);
+      if (unit === 'day') return `${d.getMonth()+1}/${d.getDate()}`;
+      return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:00`;
+    }
+    function bucketStart(ms, unit) {
+      const d = new Date(ms);
+      if (unit === 'day') { d.setHours(0,0,0,0); }
+      else { d.setMinutes(0,0,0); }
+      return d.getTime();
+    }
+
+    function buildChart(rows) {
+      if (!rows.length) return { labels:[], usage:[], balance:[], balanceMin:undefined, balanceMax:undefined };
+      const spanH = (new Date(rows[rows.length-1].end_time) - new Date(rows[0].end_time)) / 3600000;
+      const unit = spanH > 24*7 ? 'day' : 'hour';
+      const map = new Map();
+      for (const row of rows) {
+        const t = new Date(row.end_time).getTime();
+        const bkt = bucketStart(t, unit);
+        if (!map.has(bkt)) map.set(bkt, { usage: 0, balance: 0, t: bkt });
+        map.get(bkt).usage += row.usage;
+        map.get(bkt).balance = row.balance;
+      }
+      const pts = Array.from(map.values()).sort((a,b)=>a.t-b.t);
+      const MAX = 120;
+      let final = pts;
+      if (pts.length > MAX) {
+        const gs = Math.ceil(pts.length / MAX);
+        final = [];
+        for (let i = 0; i < pts.length; i += gs) {
+          const g = pts.slice(i, i+gs);
+          final.push({ usage: g.reduce((s,p)=>s+p.usage,0), balance: g[g.length-1].balance, t: g[g.length-1].t });
+        }
+      }
+      const labels = final.map(p => fmtLabel(p.t, unit));
+      const usage = final.map(p => round2(p.usage));
+      const balance = final.map(p => round2(p.balance));
+      const bVals = balance.filter(v => v > 0);
+      let balanceMin, balanceMax;
+      if (bVals.length) {
+        const bMin = Math.min(...bVals), bMax = Math.max(...bVals);
+        const pad = Math.max((bMax-bMin)*0.3, 2);
+        balanceMin = Math.floor(bMin - pad);
+        balanceMax = Math.ceil(bMax + pad);
+      }
+      return { labels, usage, balance, balanceMin, balanceMax };
+    }
+
+    function updateChart() {
+      const overlay = document.getElementById('chartOverlay');
+      if (!records.length) {
+        overlay.style.display = 'flex';
+        myChart?.setOption({ xAxis: { data: [] }, series: [{ data: [] }, { data: [] }] });
+        return;
+      }
+      overlay.style.display = 'none';
+      const { labels, usage, balance, balanceMin, balanceMax } = buildChart(records);
+      myChart.setOption({
+        xAxis: { data: labels },
+        yAxis: [ {}, { min: balanceMin, max: balanceMax } ],
+        series: [{ data: usage }, { data: balance }],
+      });
+
+      // 更新区间用电统计
+      const total = usage.reduce((s,v)=>s+v, 0);
+      document.getElementById('statUsage').textContent = `${round2(total).toFixed(2)} 度`;
+    }
+
+    // ——— 数据加载 ———
+    async function loadUsage(start, end) {
+      const errEl = document.getElementById('errorMsg');
+      errEl.style.display = 'none';
+      try {
+        const res = await axios.get(`${API}/electricity-balances/hour-range/${roomId}`, {
+          params: { start_time: start, end_time: end }, headers
+        });
+        records = res.data || [];
+        updateChart();
+      } catch (e) {
+        errEl.textContent = '加载用电数据失败';
+        errEl.style.display = 'block';
+        records = [];
+        updateChart();
+      }
+    }
+
+    // ——— 快捷时间 ———
+    const RANGES = {
+      today:      () => { const s = startOfDay(new Date()); return [s, new Date()]; },
+      yesterday:  () => { const d = new Date(); d.setDate(d.getDate()-1); return [startOfDay(d), endOfDay(d)]; },
+      this_week:  () => { const d = new Date(); d.setDate(d.getDate()-d.getDay()); return [startOfDay(d), new Date()]; },
+      last_week:  () => { const d = new Date(); d.setDate(d.getDate()-d.getDay()-7); const e = new Date(d); e.setDate(d.getDate()+6); return [startOfDay(d), endOfDay(e)]; },
+      this_month: () => { const d = new Date(); d.setDate(1); return [startOfDay(d), new Date()]; },
+      last_month: () => { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth()-1); const e = new Date(d.getFullYear(), d.getMonth()+1, 0); return [startOfDay(d), endOfDay(e)]; },
+    };
+    function startOfDay(d) { const r=new Date(d); r.setHours(0,0,0,0); return r; }
+    function endOfDay(d)   { const r=new Date(d); r.setHours(23,59,59,999); return r; }
+
+    document.getElementById('quickBtns').addEventListener('click', e => {
+      const btn = e.target.closest('.qbtn');
+      if (!btn) return;
+      document.querySelectorAll('.qbtn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const [s, end] = RANGES[btn.dataset.v]();
+      loadUsage(s.toISOString(), end.toISOString());
+    });
+
+    function doCustomSearch() {
+      const s = document.getElementById('dateStart').value;
+      const e = document.getElementById('dateEnd').value;
+      if (!s || !e) { alert('请选择开始和结束日期'); return; }
+      document.querySelectorAll('.qbtn').forEach(b => b.classList.remove('active'));
+      loadUsage(startOfDay(new Date(s)).toISOString(), endOfDay(new Date(e)).toISOString());
+    }
+
+    // 限制日期选择器不超过今天
+    const todayStr = new Date().toISOString().split('T')[0];
+    document.getElementById('dateStart').max = todayStr;
+    document.getElementById('dateEnd').max = todayStr;
+
+    // ——— 初始化 ———
+    async function init() {
+      initChart();
+      try {
+        const [ri, bi] = await Promise.all([
+          axios.get(`${API}/rooms/${roomId}`, { headers }),
+          axios.get(`${API}/electricity-balances/latest/${roomId}`, { headers }).catch(() => null),
+        ]);
+        const room = ri.data;
+        document.title = `${room.name} — ElecLog`;
+        document.getElementById('headerTitle').textContent = room.name;
+        document.getElementById('headerSub').textContent = `${room.building_code}号楼 ${room.floor_code}层 ${room.room_code}室`;
+        document.getElementById('statRoom').textContent = room.name;
+
+        if (bi) {
+          const yuan = bi.data.balance / 100;
+          const balEl = document.getElementById('statBalance');
+          balEl.textContent = `¥ ${yuan.toFixed(2)}`;
+          balEl.className = 'stat-value ' + (yuan >= 30 ? 'good' : yuan >= 10 ? 'warn' : 'low');
+        }
+      } catch (e) {
+        document.getElementById('errorMsg').textContent = '加载房间信息失败';
+        document.getElementById('errorMsg').style.display = 'block';
+      }
+      // 默认加载今天
+      const [s, end] = RANGES['today']();
+      loadUsage(s.toISOString(), end.toISOString());
+    }
+
+    init();
+  </script>
+</body>
+</html>

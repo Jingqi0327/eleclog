@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ElecLog — 寝室电费监控</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface2: #22263a;
+      --border: #2d3148;
+      --accent: #4f9cf9;
+      --accent-hover: #6aaeff;
+      --green: #34d399;
+      --yellow: #fbbf24;
+      --red: #f87171;
+      --text: #e8eaf6;
+      --text-muted: #8890b0;
+      --radius: 14px;
+    }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      background-image: radial-gradient(ellipse at 20% 10%, rgba(79,156,249,0.07) 0%, transparent 55%);
+    }
+    header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 1rem 2rem;
+      border-bottom: 1px solid var(--border);
+      background: rgba(26,29,39,0.85);
+      backdrop-filter: blur(12px);
+      position: sticky; top: 0; z-index: 100;
+    }
+    .logo { display: flex; align-items: center; gap: 0.6rem; }
+    .logo-icon {
+      width: 32px; height: 32px;
+      background: linear-gradient(135deg, var(--accent), #818cf8);
+      border-radius: 7px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1rem;
+    }
+    .logo-name { font-size: 1.1rem; font-weight: 700; }
+    nav { display: flex; align-items: center; gap: 0.75rem; }
+    .nav-btn {
+      background: none; border: 1px solid var(--border); color: var(--text-muted);
+      border-radius: 8px; padding: 0.4rem 0.9rem; font-size: 0.82rem; font-family: inherit;
+      cursor: pointer; transition: all 0.2s; text-decoration: none; display: inline-block;
+    }
+    .nav-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .nav-btn.primary {
+      background: var(--accent); border-color: var(--accent); color: #fff;
+    }
+    .nav-btn.primary:hover { background: var(--accent-hover); }
+    main { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem; }
+    h1 { font-size: 1.6rem; font-weight: 700; margin-bottom: 0.3rem; }
+    .subtitle { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 2rem; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 1rem;
+    }
+    .room-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem 1.4rem;
+      cursor: pointer;
+      transition: transform 0.18s, border-color 0.18s, box-shadow 0.18s;
+      text-decoration: none;
+      display: block;
+    }
+    .room-card:hover {
+      transform: translateY(-3px);
+      border-color: var(--accent);
+      box-shadow: 0 8px 30px rgba(79,156,249,0.15);
+    }
+    .room-id { font-size: 0.72rem; color: var(--text-muted); margin-bottom: 0.3rem; }
+    .room-name { font-size: 1.05rem; font-weight: 600; margin-bottom: 0.8rem; }
+    .room-balance {
+      font-size: 1.6rem; font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+    .room-balance.good { color: var(--green); }
+    .room-balance.warn { color: var(--yellow); }
+    .room-balance.low  { color: var(--red); }
+    .room-balance-label { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.2rem; }
+    .room-time { font-size: 0.72rem; color: var(--text-muted); margin-top: 0.6rem; }
+    .skeleton {
+      background: linear-gradient(90deg, var(--surface) 25%, var(--surface2) 50%, var(--surface) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s infinite;
+      border-radius: 6px;
+    }
+    @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+    .skeleton-card {
+      height: 140px; border-radius: var(--radius);
+    }
+    .pagination { display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin-top: 2rem; }
+    .page-btn {
+      background: var(--surface2); border: 1px solid var(--border); color: var(--text-muted);
+      border-radius: 7px; padding: 0.4rem 0.8rem; font-family: inherit; font-size: 0.83rem;
+      cursor: pointer; transition: all 0.15s;
+    }
+    .page-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+    .page-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+    .page-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .empty { text-align: center; color: var(--text-muted); padding: 4rem 0; font-size: 0.95rem; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">
+      <div class="logo-icon">⚡</div>
+      <span class="logo-name">ElecLog</span>
+    </div>
+    <nav>
+      <span id="navLoginBtn" style="display:none">
+        <a class="nav-btn" href="login.html">登录</a>
+      </span>
+      <span id="navManageBtn" style="display:none">
+        <a class="nav-btn" href="manage.html">管理</a>
+      </span>
+      <span id="navLogoutBtn" style="display:none">
+        <button class="nav-btn" onclick="logout()">退出登录</button>
+      </span>
+    </nav>
+  </header>
+
+  <main>
+    <h1>寝室电费总览</h1>
+    <p class="subtitle">实时监控各寝室用电余额，点击房间查看详细用电趋势</p>
+    <div class="grid" id="grid">
+      <!-- skeleton -->
+      <div class="skeleton skeleton-card"></div>
+      <div class="skeleton skeleton-card"></div>
+      <div class="skeleton skeleton-card"></div>
+    </div>
+    <div class="pagination" id="pagination"></div>
+  </main>
+
+  <script>
+    const API = window.location.origin.includes('localhost') || window.location.protocol === 'file:'
+      ? 'http://localhost:8080'
+      : '/api';
+
+    let page = 1;
+    const PAGE_SIZE = 12;
+    let totalPages = 1;
+
+    function getToken() { return localStorage.getItem('accesstoken'); }
+
+    function initNav() {
+      const loggedIn = !!getToken();
+      document.getElementById('navLoginBtn').style.display = loggedIn ? 'none' : '';
+      document.getElementById('navManageBtn').style.display = loggedIn ? '' : 'none';
+      document.getElementById('navLogoutBtn').style.display = loggedIn ? '' : 'none';
+    }
+    function logout() {
+      localStorage.removeItem('accesstoken');
+      initNav();
+    }
+    initNav();
+
+    function balanceClass(yuan) {
+      if (yuan >= 30) return 'good';
+      if (yuan >= 10) return 'warn';
+      return 'low';
+    }
+
+    function formatTime(iso) {
+      if (!iso) return '—';
+      const d = new Date(iso);
+      return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    }
+
+    async function loadPage(p) {
+      const grid = document.getElementById('grid');
+      grid.innerHTML = `
+        <div class="skeleton skeleton-card"></div>
+        <div class="skeleton skeleton-card"></div>
+        <div class="skeleton skeleton-card"></div>`;
+      try {
+        const headers = getToken() ? { Authorization: `Bearer ${getToken()}` } : {};
+        const res = await axios.get(`${API}/rooms`, {
+          params: { page_id: p, page_size: PAGE_SIZE },
+          headers
+        });
+        const rooms = res.data.rooms || [];
+        const total = res.data.total || 0;
+        totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+        page = p;
+
+        if (rooms.length === 0) {
+          grid.innerHTML = '<div class="empty" style="grid-column:1/-1">暂无房间数据</div>';
+          document.getElementById('pagination').innerHTML = '';
+          return;
+        }
+
+        // 并发拉取每个房间的最新余额
+        const balances = await Promise.allSettled(
+          rooms.map(r =>
+            axios.get(`${API}/electricity-balances/latest/${r.id}`, { headers })
+              .then(r => r.data)
+              .catch(() => null)
+          )
+        );
+
+        grid.innerHTML = rooms.map((room, i) => {
+          const b = balances[i].status === 'fulfilled' ? balances[i].value : null;
+          const yuan = b ? (b.balance / 100) : null;
+          const cls = yuan !== null ? balanceClass(yuan) : '';
+          const balText = yuan !== null ? `¥ ${yuan.toFixed(2)}` : '— 元';
+          const timeText = b ? `更新于 ${formatTime(b.recorded_at)}` : '暂无数据';
+          return `
+            <a class="room-card" href="room.html?id=${room.id}">
+              <div class="room-id"># ${room.id}</div>
+              <div class="room-name">${room.name}</div>
+              <div class="room-balance ${cls}">${balText}</div>
+              <div class="room-balance-label">当前余额</div>
+              <div class="room-time">${timeText}</div>
+            </a>`;
+        }).join('');
+
+        renderPagination();
+      } catch (e) {
+        grid.innerHTML = '<div class="empty" style="grid-column:1/-1">加载失败，请检查后端服务</div>';
+      }
+    }
+
+    function renderPagination() {
+      const el = document.getElementById('pagination');
+      if (totalPages <= 1) { el.innerHTML = ''; return; }
+      let html = `<button class="page-btn" onclick="loadPage(${page-1})" ${page<=1?'disabled':''}>‹ 上一页</button>`;
+      for (let i = 1; i <= totalPages; i++) {
+        html += `<button class="page-btn ${i===page?'active':''}" onclick="loadPage(${i})">${i}</button>`;
+      }
+      html += `<button class="page-btn" onclick="loadPage(${page+1})" ${page>=totalPages?'disabled':''}>下一页 ›</button>`;
+      el.innerHTML = html;
+    }
+
+    loadPage(1);
+  </script>
+</body>
+</html>
