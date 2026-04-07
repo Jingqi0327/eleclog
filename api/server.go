@@ -67,6 +67,7 @@ func (server *Server) setupRouter() {
 	authRoutes.GET("/proxy/floors", server.proxyQueryFloor)
 	authRoutes.GET("/proxy/rooms", server.proxyQueryRoom)
 	authRoutes.GET("/proxy/room-surplus", server.proxyQueryRoomSurplus)
+	authRoutes.POST("/electricity-balances/import/:room_id", server.importElectricityRecords)
 
 	router.GET("/rooms/:id", server.getRoom)
 	router.GET("/rooms", server.listRooms)

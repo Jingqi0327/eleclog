@@ -6,6 +6,7 @@ package db
 
 import (
 	"context"
+	"time"
 )
 
 type Querier interface {
@@ -31,6 +32,8 @@ type Querier interface {
 	DeleteUserRoomNotification(ctx context.Context, arg DeleteUserRoomNotificationParams) error
 	// 获取最新的余额记录
 	GetLatestBalance(ctx context.Context, roomID int64) (ElectricityRecord, error)
+	// 获取指定时间范围内已有记录的时间戳列表（用于导入去重）
+	GetRecordedAtsByRange(ctx context.Context, arg GetRecordedAtsByRangeParams) ([]time.Time, error)
 	// 获取指定时间范围内的每小时记录
 	GetRecordsByHourRange(ctx context.Context, arg GetRecordsByHourRangeParams) ([]ElectricityRecord, error)
 	// 根据ID查询寝室信息

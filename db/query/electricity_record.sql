@@ -30,3 +30,9 @@ SELECT * FROM electricity_records
 WHERE room_id = $1
 ORDER BY recorded_at DESC
 LIMIT 1;
+
+-- name: GetRecordedAtsByRange :many
+-- 获取指定时间范围内已有记录的时间戳列表（用于导入去重）
+SELECT recorded_at FROM electricity_records
+WHERE room_id = $1
+  AND recorded_at BETWEEN @start_time AND @end_time;

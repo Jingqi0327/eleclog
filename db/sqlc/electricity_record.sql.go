@@ -85,6 +85,42 @@ func (q *Queries) GetLatestBalance(ctx context.Context, roomID int64) (Electrici
 	return i, err
 }
 
+const getRecordedAtsByRange = `-- name: GetRecordedAtsByRange :many
+SELECT recorded_at FROM electricity_records
+WHERE room_id = $1
+  AND recorded_at BETWEEN $2 AND $3
+`
+
+type GetRecordedAtsByRangeParams struct {
+	RoomID    int64     `json:"room_id"`
+	StartTime time.Time `json:"start_time"`
+	EndTime   time.Time `json:"end_time"`
+}
+
+// 获取指定时间范围内已有记录的时间戳列表（用于导入去重）
+func (q *Queries) GetRecordedAtsByRange(ctx context.Context, arg GetRecordedAtsByRangeParams) ([]time.Time, error) {
+	rows, err := q.db.QueryContext(ctx, getRecordedAtsByRange, arg.RoomID, arg.StartTime, arg.EndTime)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []time.Time{}
+	for rows.Next() {
+		var recorded_at time.Time
+		if err := rows.Scan(&recorded_at); err != nil {
+			return nil, err
+		}
+		items = append(items, recorded_at)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getRecordsByHourRange = `-- name: GetRecordsByHourRange :many
 SELECT id, room_id, balance, recorded_at FROM electricity_records
 WHERE room_id = $1 
