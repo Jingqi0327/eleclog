@@ -43,8 +43,11 @@ sqlc:
 server:
 	go run main.go
 
+frontend:
+	python3 -m http.server --directory frontend/html 3000
+
 test:
 	go test -v -cover -short ./...
 
 
-.PHONY: createdb dropdb createtestdb droptestdb migrateup migratedown migratetestup migratetestdown migrateup1 migratedown1 new_migration db_schema sqlc server test 
+.PHONY: createdb dropdb createtestdb droptestdb migrateup migratedown migratetestup migratetestdown migrateup1 migratedown1 new_migration db_schema sqlc server test frontend

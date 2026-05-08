@@ -8,6 +8,10 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <link rel="stylesheet" type="text/css" href="https://npmcdn.com/flatpickr/dist/themes/dark.css">
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/zh.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -46,11 +50,12 @@
     }
     .back-btn:hover { border-color: var(--accent); color: var(--accent); }
     .header-title { font-weight: 600; font-size: 1rem; }
-    .header-sub { color: var(--text-muted); font-size: 0.8rem; margin-left: auto; }
-    .content { flex: 1; display: flex; flex-direction: column; padding: 1.25rem 1.5rem; min-height: 0; }
+    .header-sub { display: none; }
+    /* 问题1: 加宽最大宽度，让全屏模式下内容占满更多空间 */
+    .content { flex: 1; display: flex; flex-direction: column; padding: 1.25rem 1.5rem; min-height: 0; max-width: 1400px; margin: 0 auto; width: 100%; }
 
     /* 统计卡片 */
-    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.9rem; margin-bottom: 1rem; }
+    .stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.9rem; margin-bottom: 1rem; }
     .stat-card {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -76,30 +81,49 @@
     }
     .qbtn:hover { border-color: var(--accent); color: var(--accent); }
     .qbtn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
-    .custom-range { display: flex; align-items: center; gap: 0.4rem; }
-    input[type="date"] {
-      background: var(--surface2); border: 1px solid var(--border); color: var(--text);
-      border-radius: 7px; padding: 0.35rem 0.6rem; font-size: 0.8rem; font-family: inherit;
-      outline: none; cursor: pointer;
+    /* 问题6: 日期范围组件改为统一容器 */
+    .date-range-picker {
+      display: flex; align-items: center;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.15rem 0.35rem;
+      gap: 0.2rem;
+      transition: border-color 0.2s;
     }
-    input[type="date"]:focus { border-color: var(--accent); }
+    .date-range-picker:focus-within { border-color: var(--accent); }
+    .date-range-picker input[type="date"] {
+      background: transparent; border: none; color: var(--text);
+      font-size: 0.8rem; font-family: inherit;
+      outline: none; cursor: pointer;
+      padding: 0.3rem 0.4rem;
+    }
+    .date-range-picker .sep {
+      color: var(--text-muted); font-size: 0.75rem; user-select: none;
+    }
     .search-btn {
       background: var(--accent); border: none; color: #fff;
-      border-radius: 7px; padding: 0.35rem 0.85rem; font-size: 0.8rem; font-family: inherit;
-      cursor: pointer; transition: background 0.15s;
+      border-radius: 6px; padding: 0.35rem 0.85rem; font-size: 0.8rem; font-family: inherit;
+      cursor: pointer; transition: background 0.15s; margin-left: 0.35rem;
     }
     .search-btn:hover { background: var(--accent-hover); }
+    .clear-btn {
+      background: none; border: 1px solid var(--border); color: var(--text-muted);
+      border-radius: 6px; padding: 0.35rem 0.65rem; font-size: 0.8rem; font-family: inherit;
+      cursor: pointer; transition: all 0.15s;
+    }
+    .clear-btn:hover { border-color: var(--red); color: var(--red); }
 
-    /* 图表 */
+    /* 图表 - 问题1: 增大图表高度 */
     .chart-wrap {
-      flex: 1;
+      height: 550px;
+      flex: none;
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--radius);
-      min-height: 320px;
       position: relative;
     }
-    #chart { width: 100%; height: 100%; min-height: 320px; }
+    #chart { width: 100%; height: 100%; }
     .chart-overlay {
       position: absolute; inset: 0;
       display: flex; align-items: center; justify-content: center;
@@ -122,7 +146,6 @@
   <header>
     <button class="back-btn" onclick="history.back()">← 返回</button>
     <span class="header-title" id="headerTitle">房间用电详情</span>
-    <span class="header-sub" id="headerSub"></span>
   </header>
 
   <div class="content">
@@ -139,6 +162,14 @@
         <div class="stat-label">⚡ 区间总用电</div>
         <div class="stat-value" id="statUsage" style="color:var(--accent)">0.00 度</div>
       </div>
+      <div class="stat-card">
+        <div class="stat-label">💸 区间耗电费</div>
+        <div class="stat-value" id="statCost" style="color:#fb923c">0.00 元</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">📅 展示时间范围</div>
+        <div class="stat-value" id="statTimeRange" style="font-size:0.95rem; line-height: 1.5; margin-top:0.4rem">—<br>—</div>
+      </div>
     </div>
 
     <div id="errorMsg" class="error-msg" style="display:none"></div>
@@ -152,11 +183,11 @@
         <button class="qbtn" data-v="this_month">本月</button>
         <button class="qbtn" data-v="last_month">上月</button>
       </div>
-      <div class="custom-range">
-        <input type="date" id="dateStart" />
-        <span style="color:var(--text-muted);font-size:0.8rem">至</span>
-        <input type="date" id="dateEnd" />
+      <!-- 问题6: 统一的日期范围选择组件 -->
+      <div style="display:flex; align-items:center; gap:0.35rem;">
+        <input type="text" id="dateRange" placeholder="选择起止日期" style="background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:0.4rem 0.6rem; color:var(--text); font-size:0.8rem; width:220px; font-family:inherit; outline:none; transition:border-color 0.2s;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'" />
         <button class="search-btn" onclick="doCustomSearch()">查询</button>
+        <button class="clear-btn" onclick="doClearDateRange()">清空</button>
       </div>
     </div>
 
@@ -180,23 +211,102 @@
 
     let myChart = null;
     let records = [];
+    // 记录当前查询的时间范围，用于计算横坐标分度值
+    let currentStartTime = null;
+    let currentEndTime = null;
 
     // ——— ECharts 初始化 ———
     function initChart() {
       myChart = echarts.init(document.getElementById('chart'), 'dark');
       myChart.setOption({
         backgroundColor: 'transparent',
-        tooltip: { trigger: 'axis', backgroundColor: '#1a1d27', borderColor: '#2d3148', textStyle: { color: '#e8eaf6' } },
+        tooltip: {
+          trigger: 'axis',
+          backgroundColor: '#1a1d27',
+          borderColor: '#2d3148',
+          textStyle: { color: '#e8eaf6' },
+          // 问题4: hover时显示高亮点
+          axisPointer: {
+            type: 'cross',
+            crossStyle: { color: '#8890b0' },
+            lineStyle: { color: '#2d3148' }
+          },
+          formatter: function(params) {
+            let html = `<div>${params[0].name}</div>`;
+            let u = 0;
+            params.forEach(p => {
+              // 问题4: tooltip 里 marker 颜色与线颜色一致 (ECharts自动处理)
+              html += `<div style="margin-top:4px">${p.marker} ${p.seriesName}: <span style="font-weight:600">${p.value !== undefined ? p.value : 0}</span></div>`;
+              if (p.seriesName === '用电量(度)') u = p.value || 0;
+            });
+            let cost = (u * 0.53).toFixed(2);
+            html += `<div style="margin-top:4px"><span style="display:inline-block;margin-right:4px;border-radius:10px;width:10px;height:10px;background-color:#fb923c;"></span> 电费(元): <span style="font-weight:600">${cost}</span></div>`;
+            return html;
+          }
+        },
         legend: { data: ['用电量(度)', '余额(元)'], textStyle: { color: '#8890b0' }, top: 8 },
-        grid: { top: 50, bottom: 50, left: 60, right: 70 },
-        xAxis: { type: 'category', data: [], axisLabel: { color: '#8890b0', rotate: 20, fontSize: 11 }, axisLine: { lineStyle: { color: '#2d3148' } } },
+        // 问题7: 减小左右间距让图表起终点贴边
+        grid: { top: 50, bottom: 50, left: 50, right: 55, containLabel: false },
+        xAxis: {
+          type: 'category',
+          data: [],
+          // 问题2+7: boundaryGap:false 让折线从最左边到最右边，坐标值与数据点对齐
+          boundaryGap: false,
+          axisLabel: { color: '#8890b0', fontSize: 11, rotate: 0 },
+          axisLine: { lineStyle: { color: '#2d3148' } },
+          axisTick: { alignWithLabel: true }
+        },
         yAxis: [
-          { type: 'value', name: '度', nameTextStyle: { color: '#8890b0' }, splitLine: { lineStyle: { color: '#2d3148' } }, axisLabel: { color: '#8890b0' } },
-          { type: 'value', name: '元', nameTextStyle: { color: '#8890b0' }, splitLine: { show: false }, axisLabel: { color: '#8890b0' } },
+          {
+            type: 'value', name: '度',
+            nameTextStyle: { color: '#8890b0' },
+            splitLine: { lineStyle: { color: '#2d3148' } },
+            axisLabel: { color: '#8890b0' },
+            // 问题3: 纵坐标最小为0，不出现负数
+            min: 0
+          },
+          {
+            type: 'value', name: '元',
+            nameTextStyle: { color: '#8890b0' },
+            splitLine: { show: false },
+            axisLabel: { color: '#8890b0' }
+          },
         ],
         series: [
-          { name: '用电量(度)', type: 'bar', data: [], itemStyle: { color: '#4f9cf9', borderRadius: [3,3,0,0] }, barMaxWidth: 30 },
-          { name: '余额(元)', type: 'line', yAxisIndex: 1, data: [], smooth: true, lineStyle: { color: '#34d399', width: 2 }, symbol: 'none', areaStyle: { color: { type: 'linear', x:0,y:0,x2:0,y2:1, colorStops:[{offset:0,color:'rgba(52,211,153,0.2)'},{offset:1,color:'transparent'}] } } },
+          {
+            name: '用电量(度)', type: 'line', data: [], smooth: true,
+            // 问题4: 统一线颜色
+            itemStyle: { color: '#4f9cf9' },
+            lineStyle: { width: 2, color: '#4f9cf9' },
+            // 问题4: 默认不显示点，hover时显示高亮圆点
+            symbol: 'circle', symbolSize: 6, showSymbol: false,
+            emphasis: {
+              focus: 'series',
+              itemStyle: { color: '#4f9cf9', borderColor: '#fff', borderWidth: 2 }
+            },
+            areaStyle: {
+              color: { type: 'linear', x:0,y:0,x2:0,y2:1,
+                colorStops:[{offset:0,color:'rgba(79,156,249,0.2)'},{offset:1,color:'transparent'}]
+              }
+            }
+          },
+          {
+            name: '余额(元)', type: 'line', yAxisIndex: 1, data: [], smooth: true,
+            // 问题4: 统一线颜色
+            itemStyle: { color: '#34d399' },
+            lineStyle: { color: '#34d399', width: 2 },
+            // 问题4: 默认不显示点，hover时显示高亮圆点
+            symbol: 'circle', symbolSize: 6, showSymbol: false,
+            emphasis: {
+              focus: 'series',
+              itemStyle: { color: '#34d399', borderColor: '#fff', borderWidth: 2 }
+            },
+            areaStyle: {
+              color: { type: 'linear', x:0,y:0,x2:0,y2:1,
+                colorStops:[{offset:0,color:'rgba(52,211,153,0.2)'},{offset:1,color:'transparent'}]
+              }
+            }
+          },
         ],
       });
       window.addEventListener('resize', () => myChart?.resize());
@@ -204,44 +314,82 @@
 
     // ——— 数据聚合 ———
     function round2(n) { return Math.round(n * 100) / 100; }
-    function fmtLabel(ms, unit) {
-      const d = new Date(ms);
-      if (unit === 'day') return `${d.getMonth()+1}/${d.getDate()}`;
-      return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:00`;
+
+    // 问题5: 根据实际数据跨度灵活计算聚合单位和标签格式
+    function calcTimeParams(spanHours) {
+      const MAX_TICKS = 35;
+      let bucketHours, labelFn;
+
+      if (spanHours <= 24) {
+        // 按天: 尝试1h一格
+        bucketHours = 1;
+        labelFn = (d) => `${String(d.getHours()).padStart(2,'0')}:00`;
+      } else if (spanHours <= 24 * 7) {
+        // 按周或不满一周: 动态计算
+        // 先算如果1h一格有多少格
+        const ticksAt1h = Math.ceil(spanHours / 1);
+        if (ticksAt1h <= MAX_TICKS) {
+          bucketHours = 1;
+        } else {
+          // 需要合并，计算最小合并小时数使得格数 < MAX_TICKS
+          bucketHours = Math.ceil(spanHours / MAX_TICKS);
+          // 取一个"好看"的值：1, 2, 3, 4, 6, 8, 12
+          const niceValues = [1, 2, 3, 4, 6, 8, 12];
+          for (const nv of niceValues) {
+            if (nv >= bucketHours) { bucketHours = nv; break; }
+          }
+        }
+        labelFn = (d) => `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:00`;
+      } else {
+        // 按月或更长: 以天为单位
+        const spanDays = spanHours / 24;
+        const ticksAt1d = Math.ceil(spanDays);
+        if (ticksAt1d <= MAX_TICKS) {
+          bucketHours = 24;
+        } else {
+          const bucketDays = Math.ceil(spanDays / MAX_TICKS);
+          bucketHours = bucketDays * 24;
+        }
+        labelFn = (d) => `${d.getMonth()+1}/${d.getDate()}`;
+      }
+      return { bucketHours, labelFn };
     }
-    function bucketStart(ms, unit) {
+
+    function bucketStart(ms, bucketHours) {
       const d = new Date(ms);
-      if (unit === 'day') { d.setHours(0,0,0,0); }
-      else { d.setMinutes(0,0,0); }
+      if (bucketHours >= 24) {
+        d.setHours(0,0,0,0);
+      } else {
+        // 按 bucketHours 对齐
+        const h = Math.floor(d.getHours() / bucketHours) * bucketHours;
+        d.setHours(h, 0, 0, 0);
+      }
       return d.getTime();
     }
 
     function buildChart(rows) {
       if (!rows.length) return { labels:[], usage:[], balance:[], balanceMin:undefined, balanceMax:undefined };
-      const spanH = (new Date(rows[rows.length-1].end_time) - new Date(rows[0].end_time)) / 3600000;
-      const unit = spanH > 24*7 ? 'day' : 'hour';
+
+      const firstTime = new Date(rows[0].end_time).getTime();
+      const lastTime = new Date(rows[rows.length-1].end_time).getTime();
+      const spanH = (lastTime - firstTime) / 3600000;
+
+      // 问题5: 动态计算时间参数
+      const { bucketHours, labelFn } = calcTimeParams(spanH || 1);
+
       const map = new Map();
       for (const row of rows) {
         const t = new Date(row.end_time).getTime();
-        const bkt = bucketStart(t, unit);
+        const bkt = bucketStart(t, bucketHours);
         if (!map.has(bkt)) map.set(bkt, { usage: 0, balance: 0, t: bkt });
         map.get(bkt).usage += row.usage;
         map.get(bkt).balance = row.balance;
       }
       const pts = Array.from(map.values()).sort((a,b)=>a.t-b.t);
-      const MAX = 120;
-      let final = pts;
-      if (pts.length > MAX) {
-        const gs = Math.ceil(pts.length / MAX);
-        final = [];
-        for (let i = 0; i < pts.length; i += gs) {
-          const g = pts.slice(i, i+gs);
-          final.push({ usage: g.reduce((s,p)=>s+p.usage,0), balance: g[g.length-1].balance, t: g[g.length-1].t });
-        }
-      }
-      const labels = final.map(p => fmtLabel(p.t, unit));
-      const usage = final.map(p => round2(p.usage));
-      const balance = final.map(p => round2(p.balance));
+
+      const labels = pts.map(p => labelFn(new Date(p.t)));
+      const usage = pts.map(p => round2(p.usage));
+      const balance = pts.map(p => round2(p.balance));
       const bVals = balance.filter(v => v > 0);
       let balanceMin, balanceMax;
       if (bVals.length) {
@@ -262,8 +410,21 @@
       }
       overlay.style.display = 'none';
       const { labels, usage, balance, balanceMin, balanceMax } = buildChart(records);
+
+      // 问题5: 计算 xAxis interval 保证刻度数 < 35
+      let labelInterval = 0;
+      if (labels.length > 35) {
+        labelInterval = Math.ceil(labels.length / 35) - 1;
+      }
+
       myChart.setOption({
-        xAxis: { data: labels },
+        xAxis: {
+          data: labels,
+          axisLabel: {
+            interval: labelInterval,
+            rotate: labels.length > 20 ? 20 : 0
+          }
+        },
         yAxis: [ {}, { min: balanceMin, max: balanceMax } ],
         series: [{ data: usage }, { data: balance }],
       });
@@ -271,10 +432,23 @@
       // 更新区间用电统计
       const total = usage.reduce((s,v)=>s+v, 0);
       document.getElementById('statUsage').textContent = `${round2(total).toFixed(2)} 度`;
+      document.getElementById('statCost').textContent = `${(total * 0.53).toFixed(2)} 元`;
     }
 
     // ——— 数据加载 ———
+    function formatRangeDate(isoStr) {
+      if (!isoStr) return '—';
+      const d = new Date(isoStr);
+      return `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    }
+
     async function loadUsage(start, end) {
+      currentStartTime = start;
+      currentEndTime = end;
+      
+      const elRange = document.getElementById('statTimeRange');
+      elRange.innerHTML = `${formatRangeDate(start)}<br>${formatRangeDate(end)}`;
+
       const errEl = document.getElementById('errorMsg');
       errEl.style.display = 'none';
       try {
@@ -312,18 +486,28 @@
       loadUsage(s.toISOString(), end.toISOString());
     });
 
+    let dateRangePicker = flatpickr("#dateRange", {
+      mode: "range",
+      dateFormat: "Y-m-d",
+      locale: "zh",
+      maxDate: "today"
+    });
+
     function doCustomSearch() {
-      const s = document.getElementById('dateStart').value;
-      const e = document.getElementById('dateEnd').value;
-      if (!s || !e) { alert('请选择开始和结束日期'); return; }
+      const dates = dateRangePicker.selectedDates;
+      if (dates.length !== 2) { alert('请选择开始和结束日期'); return; }
       document.querySelectorAll('.qbtn').forEach(b => b.classList.remove('active'));
-      loadUsage(startOfDay(new Date(s)).toISOString(), endOfDay(new Date(e)).toISOString());
+      loadUsage(startOfDay(dates[0]).toISOString(), endOfDay(dates[1]).toISOString());
     }
 
-    // 限制日期选择器不超过今天
-    const todayStr = new Date().toISOString().split('T')[0];
-    document.getElementById('dateStart').max = todayStr;
-    document.getElementById('dateEnd').max = todayStr;
+    function doClearDateRange() {
+      dateRangePicker.clear();
+      // 清空后回到"今天"
+      document.querySelectorAll('.qbtn').forEach(b => b.classList.remove('active'));
+      document.querySelector('.qbtn[data-v="today"]').classList.add('active');
+      const [s, end] = RANGES['today']();
+      loadUsage(s.toISOString(), end.toISOString());
+    }
 
     // ——— 初始化 ———
     async function init() {
@@ -336,14 +520,13 @@
         const room = ri.data;
         document.title = `${room.name} — ElecLog`;
         document.getElementById('headerTitle').textContent = room.name;
-        document.getElementById('headerSub').textContent = `${room.building_code}号楼 ${room.floor_code}层 ${room.room_code}室`;
         document.getElementById('statRoom').textContent = room.name;
 
         if (bi) {
           const yuan = bi.data.balance / 100;
           const balEl = document.getElementById('statBalance');
           balEl.textContent = `¥ ${yuan.toFixed(2)}`;
-          balEl.className = 'stat-value ' + (yuan >= 30 ? 'good' : yuan >= 10 ? 'warn' : 'low');
+          balEl.className = 'stat-value ' + (yuan >= 15 ? 'good' : yuan >= 8 ? 'warn' : 'low');
         }
       } catch (e) {
         document.getElementById('errorMsg').textContent = '加载房间信息失败';

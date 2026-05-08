@@ -82,7 +82,7 @@
       box-shadow: 0 8px 30px rgba(79,156,249,0.15);
     }
     .room-id { font-size: 0.72rem; color: var(--text-muted); margin-bottom: 0.3rem; }
-    .room-name { font-size: 1.05rem; font-weight: 600; margin-bottom: 0.8rem; }
+    .room-name { font-size: 1.05rem; font-weight: 600; margin-bottom: 0.8rem; color: #fff; }
     .room-balance {
       font-size: 1.6rem; font-weight: 700;
       font-variant-numeric: tabular-nums;
@@ -127,9 +127,6 @@
       <span id="navManageBtn" style="display:none">
         <a class="nav-btn" href="manage.html">管理</a>
       </span>
-      <span id="navLogoutBtn" style="display:none">
-        <button class="nav-btn" onclick="logout()">退出登录</button>
-      </span>
     </nav>
   </header>
 
@@ -160,17 +157,12 @@
       const loggedIn = !!getToken();
       document.getElementById('navLoginBtn').style.display = loggedIn ? 'none' : '';
       document.getElementById('navManageBtn').style.display = loggedIn ? '' : 'none';
-      document.getElementById('navLogoutBtn').style.display = loggedIn ? '' : 'none';
-    }
-    function logout() {
-      localStorage.removeItem('accesstoken');
-      initNav();
     }
     initNav();
 
     function balanceClass(yuan) {
-      if (yuan >= 30) return 'good';
-      if (yuan >= 10) return 'warn';
+      if (yuan >= 15) return 'good';
+      if (yuan >= 8) return 'warn';
       return 'low';
     }
 

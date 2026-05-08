@@ -131,7 +131,7 @@
 
     // 已登录则跳回首页
     if (localStorage.getItem('accesstoken')) {
-      location.href = 'index.html';
+      location.href = 'manage.html';
     }
 
     document.getElementById('password').addEventListener('keydown', e => {
@@ -154,7 +154,7 @@
       try {
         const res = await axios.post(`${API}/users/login`, { username, password });
         localStorage.setItem('accesstoken', res.data.access_token);
-        const redirect = new URLSearchParams(location.search).get('redirect') || 'index.html';
+        const redirect = new URLSearchParams(location.search).get('redirect') || 'manage.html';
         location.href = redirect;
       } catch (e) {
         errMsg.textContent = e.response?.data?.error || '登录失败，请检查用户名和密码';

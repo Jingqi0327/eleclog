@@ -94,6 +94,14 @@
     .toast.info    { border-left: 3px solid var(--accent); }
     @keyframes slideIn { from { transform: translateX(30px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
     .empty-row { text-align: center; color: var(--text-muted); padding: 2rem 0; }
+    /* Switch */
+    .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--surface2); transition: .3s; border-radius: 24px; border: 1px solid var(--border); }
+    .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px; background-color: var(--text-muted); transition: .3s; border-radius: 50%; }
+    input:checked + .slider { background-color: var(--accent); border-color: var(--accent); }
+    input:checked + .slider:before { transform: translateX(20px); background-color: #fff; }
+
     @media (max-width: 700px) { .form-grid { grid-template-columns: 1fr 1fr; } }
   </style>
 </head>
@@ -116,7 +124,7 @@
     <div class="card">
       <div class="card-header">
         <h2>房间列表</h2>
-        <button class="btn primary" onclick="refreshRooms()">刷新</button>
+        <button class="btn primary" onclick="refreshRooms(true)">刷新</button>
       </div>
       <table id="roomTable">
         <thead>
@@ -171,12 +179,16 @@
       </div>
       <div class="field">
         <label>告警阈值（元）</label>
-        <input type="number" id="thresholdInput" min="0" max="9999" step="0.01" placeholder="输入余额阈值，低于此值时邮件告警" />
+        <input type="number" id="thresholdInput" min="0" max="9999" step="1" placeholder="输入余额阈值（整数），低于此值时邮件告警" />
       </div>
       <div class="field" id="enabledField" style="display:none">
         <label>启用状态</label>
-        <div style="display:flex; gap:0.5rem; margin-top:0.3rem">
-          <button class="btn" id="toggleEnabledBtn" onclick="toggleEnabled()"></button>
+        <div style="display:flex; align-items:center; gap:0.6rem; margin-top:0.5rem">
+          <label class="switch">
+            <input type="checkbox" id="toggleEnabledBtn" onchange="toggleEnabled()">
+            <span class="slider"></span>
+          </label>
+          <span id="enabledStatusText" style="font-size:0.85rem;color:var(--text);font-weight:500;"></span>
         </div>
       </div>
       <div class="modal-footer">
@@ -200,8 +212,13 @@
       </div>
       <div class="field">
         <label>JSON 文件</label>
-        <input type="file" id="importFile" accept=".json"
-          style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:0.5rem;color:var(--text);width:100%;font-size:0.85rem;cursor:pointer" />
+        <div style="position:relative; width:100%;">
+          <input type="file" id="importFile" accept=".json" style="position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); border:0;" onchange="document.getElementById('fileNameText').textContent = this.files[0] ? this.files[0].name : '未选择文件'" />
+          <label for="importFile" style="display:flex; justify-content:space-between; align-items:center; background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:0.5rem 0.8rem; color:var(--text); cursor:pointer; font-size:0.85rem; transition:border-color 0.2s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+            <span id="fileNameText" style="color:var(--text-muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-right:0.5rem;">未选择文件</span>
+            <span style="background:var(--accent); color:#fff; padding:0.35rem 0.8rem; border-radius:8px; font-weight:500; flex-shrink:0;">选择文件</span>
+          </label>
+        </div>
       </div>
       <div id="importResult" style="display:none; margin-top:0.5rem; padding:0.6rem 0.8rem; border-radius:8px; font-size:0.83rem;"></div>
       <div class="modal-footer">
@@ -249,7 +266,7 @@
     let rooms = [];
     let notifications = {}; // room_id -> notification obj
 
-    async function refreshRooms() {
+    async function refreshRooms(showNotif = false) {
       const headers = getAuthHeaders();
       try {
         const [rRes, nRes] = await Promise.all([
@@ -260,8 +277,14 @@
         notifications = {};
         (nRes.data.notifications || []).forEach(n => notifications[n.room_id] = n);
         renderRoomTable();
+        if (showNotif) { showToast('刷新成功', 'success'); }
       } catch (e) {
-        showToast('加载房间列表失败', 'error');
+        if (e.response && e.response.status === 401) {
+          showToast('登录已过期，请重新登录', 'error');
+          setTimeout(() => logout(), 1500);
+        } else {
+          showToast('加载房间列表失败', 'error');
+        }
       }
     }
 
@@ -274,7 +297,7 @@
       tbody.innerHTML = rooms.map(room => {
         const notif = notifications[room.id];
         const thresholdBadge = notif
-          ? `<span class="badge badge-blue">¥ ${(notif.threshold / 100).toFixed(2)}</span>`
+          ? `<span class="badge badge-blue">¥ ${notif.threshold}</span>`
           : `<span class="badge badge-gray">未配置</span>`;
         const statusBadge = notif
           ? (notif.is_enabled
@@ -327,7 +350,14 @@
         const sel = document.getElementById('selArea');
         sel.innerHTML = '<option value="">请选择校区</option>' +
           areaData.map(a => `<option value="${a.id}">${a.areaName}</option>`).join('');
-      } catch (e) { showToast('加载校区失败', 'error'); }
+      } catch (e) {
+        if (e.response && e.response.status === 401) {
+          showToast('登录已过期，请重新登录', 'error');
+          setTimeout(() => logout(), 1500);
+        } else {
+          showToast('加载校区失败', 'error');
+        }
+      }
     }
 
     async function onAreaChange() {
@@ -429,7 +459,7 @@
       const room = rooms.find(r => r.id === roomId);
       const notif = notifications[roomId];
       document.getElementById('modalRoomName').textContent = room?.name || '';
-      document.getElementById('thresholdInput').value = notif ? (notif.threshold / 100).toFixed(2) : '';
+      document.getElementById('thresholdInput').value = notif ? notif.threshold : '';
       const enabledField = document.getElementById('enabledField');
       if (notif) {
         modalEnabled = notif.is_enabled;
@@ -444,12 +474,15 @@
 
     function updateToggleBtn() {
       const btn = document.getElementById('toggleEnabledBtn');
-      btn.textContent = modalEnabled ? '✓ 已启用' : '✗ 已禁用';
-      btn.className = 'btn ' + (modalEnabled ? 'success' : 'danger');
+      const txt = document.getElementById('enabledStatusText');
+      btn.checked = modalEnabled;
+      txt.textContent = modalEnabled ? '已启用' : '已禁用';
+      txt.style.color = modalEnabled ? 'var(--green)' : 'var(--text-muted)';
     }
 
     function toggleEnabled() {
-      modalEnabled = !modalEnabled;
+      const btn = document.getElementById('toggleEnabledBtn');
+      modalEnabled = btn.checked;
       updateToggleBtn();
     }
 
@@ -458,19 +491,18 @@
     }
 
     async function saveThreshold() {
-      const val = parseFloat(document.getElementById('thresholdInput').value);
-      if (isNaN(val) || val < 0) { showToast('请输入有效的阈值', 'error'); return; }
-      const cents = Math.round(val * 100);
+      const val = parseInt(document.getElementById('thresholdInput').value, 10);
+      if (isNaN(val) || val < 0) { showToast('请输入有效的整数阈值', 'error'); return; }
       const existing = notifications[modalRoomId];
       const btn = document.getElementById('saveThresholdBtn');
       btn.disabled = true; btn.textContent = '保存中…';
       const headers = getAuthHeaders();
       try {
         if (existing) {
-          await axios.patch(`${API}/notifications/${modalRoomId}`, { threshold: cents, is_enabled: modalEnabled }, { headers });
+          await axios.patch(`${API}/notifications/${modalRoomId}`, { threshold: val, is_enabled: modalEnabled }, { headers });
           showToast('告警阈值已更新', 'success');
         } else {
-          await axios.post(`${API}/notifications`, { room_id: modalRoomId, threshold: cents }, { headers });
+          await axios.post(`${API}/notifications`, { room_id: modalRoomId, threshold: val }, { headers });
           showToast('告警配置已添加', 'success');
         }
         closeModal();
@@ -490,6 +522,7 @@
       const room = rooms.find(r => r.id === roomId);
       document.getElementById('importRoomName').textContent = room?.name || '';
       document.getElementById('importFile').value = '';
+      document.getElementById('fileNameText').textContent = '未选择文件';
       const result = document.getElementById('importResult');
       result.style.display = 'none';
       document.getElementById('importBtn').disabled = false;
