@@ -100,6 +100,17 @@
       margin-bottom: 1rem;
       display: none;
     }
+    /* Toast 提示 */
+    .toast-container { position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 9999; display: flex; flex-direction: column; gap: 0.5rem; }
+    .toast {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+      padding: 0.7rem 1rem; font-size: 0.85rem; min-width: 220px; max-width: 340px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.4); animation: slideIn 0.2s ease;
+    }
+    .toast.success { border-left: 3px solid #34d399; }
+    .toast.error   { border-left: 3px solid #f87171; }
+    .toast.info    { border-left: 3px solid var(--accent); }
+    @keyframes slideIn { from { transform: translateX(30px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
   </style>
 </head>
 <body>
@@ -124,14 +135,32 @@
     <button class="btn" id="loginBtn" onclick="doLogin()">登 录</button>
   </div>
 
+  <div class="toast-container" id="toastContainer"></div>
+
   <script>
     const API = window.location.origin.includes('localhost') || window.location.protocol === 'file:'
       ? 'http://localhost:8080'
       : '/api';
 
+    // Toast 提示
+    function showToast(msg, type = 'info') {
+      const c = document.getElementById('toastContainer');
+      const el = document.createElement('div');
+      el.className = `toast ${type}`;
+      el.textContent = msg;
+      c.appendChild(el);
+      setTimeout(() => el.remove(), 3500);
+    }
+
     // 已登录则跳回首页
     if (localStorage.getItem('accesstoken')) {
       location.href = 'manage.html';
+    }
+
+    // 检查登录过期标志
+    if (localStorage.getItem('loginExpired')) {
+      showToast('登录已过期，请重新登录', 'error');
+      localStorage.removeItem('loginExpired');
     }
 
     document.getElementById('password').addEventListener('keydown', e => {
@@ -154,6 +183,7 @@
       try {
         const res = await axios.post(`${API}/users/login`, { username, password });
         localStorage.setItem('accesstoken', res.data.access_token);
+        localStorage.setItem('userinfo', JSON.stringify(res.data.user));
         const redirect = new URLSearchParams(location.search).get('redirect') || 'manage.html';
         location.href = redirect;
       } catch (e) {
