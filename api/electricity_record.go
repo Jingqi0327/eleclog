@@ -62,73 +62,73 @@ type getElectricityBalanceRangeRequest struct {
 }
 
 type electricityUsageResponse struct {
-    StartTime  time.Time `json:"start_time"`
-    EndTime    time.Time `json:"end_time"`
-    Usage      float64   `json:"usage"`   // 本周期用电量（度）
-    Balance    float64   `json:"balance"` // 结束时的余额（元）
+	StartTime time.Time `json:"start_time"`
+	EndTime   time.Time `json:"end_time"`
+	Usage     float64   `json:"usage"`   // 本周期用电量（度）
+	Balance   float64   `json:"balance"` // 结束时的余额（元）
 }
 
 func (server *Server) getElectricityRecordByHourRange(ctx *gin.Context) {
-    var uriReq getElectricityBalanceRequest
-    if err := ctx.ShouldBindUri(&uriReq); err != nil {
-        ctx.JSON(http.StatusBadRequest, errorResponse(err))
-        return
-    }
+	var uriReq getElectricityBalanceRequest
+	if err := ctx.ShouldBindUri(&uriReq); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
 
-    var req getElectricityBalanceRangeRequest
-    if err := ctx.ShouldBindQuery(&req); err != nil {
-        ctx.JSON(http.StatusBadRequest, errorResponse(err))
-        return
-    }
+	var req getElectricityBalanceRangeRequest
+	if err := ctx.ShouldBindQuery(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
 
-    // 💡 核心改动 1：为了计算第一个点的用量，我们需要往前多抓一个点
-    // 假设是一小时采集一次，我们往前推 1 小时 10 分钟（预留一点误差）
-    bufferStartTime := req.StartTime.Add(-1*time.Hour - 10*time.Minute)
+	// 💡 核心改动 1：为了计算第一个点的用量，我们需要往前多抓一个点
+	// 假设是一小时采集一次，我们往前推 1 小时 10 分钟（预留一点误差）
+	bufferStartTime := req.StartTime.Add(-1*time.Hour - 10*time.Minute)
 
-    arg := db.GetRecordsByHourRangeParams{
-        RoomID:    uriReq.RoomID,
-        StartTime: bufferStartTime,
-        EndTime:   req.EndTime,
-    }
+	arg := db.GetRecordsByHourRangeParams{
+		RoomID:    uriReq.RoomID,
+		StartTime: bufferStartTime,
+		EndTime:   req.EndTime,
+	}
 
-    records, err := server.store.GetRecordsByHourRange(ctx, arg)
-    if err != nil {
-        ctx.JSON(http.StatusInternalServerError, errorResponse(err))
-        return
-    }
+	records, err := server.store.GetRecordsByHourRange(ctx, arg)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
 
-    // 💡 核心改动 2：通过循环计算差值
-    resp := make([]electricityUsageResponse, 0)
+	// 💡 核心改动 2：通过循环计算差值
+	resp := make([]electricityUsageResponse, 0)
 
-    // 我们需要至少 2 条数据才能算出 1 个区间的用量
-    for i := 1; i < len(records); i++ {
-        prev := records[i-1]
-        curr := records[i]
+	// 我们需要至少 2 条数据才能算出 1 个区间的用量
+	for i := 1; i < len(records); i++ {
+		prev := records[i-1]
+		curr := records[i]
 
-        // 如果当前点的时间早于用户要求的开始时间，说明这是用来补位的基准点，不放入结果集
-        // 但我们要用它来计算 i=1 时的 usage
-        if curr.RecordedAt.Before(req.StartTime) {
-            continue
-        }
+		// 如果当前点的时间早于用户要求的开始时间，说明这是用来补位的基准点，不放入结果集
+		// 但我们要用它来计算 i=1 时的 usage
+		if curr.RecordedAt.Before(req.StartTime) {
+			continue
+		}
 
-        // 计算用量 (前一次余额 - 本次余额) / 电价
-        // 记得将 int64 的分转为 float64 的元
-        usage := float64(prev.Balance-curr.Balance) / 100.0 / server.config.PricePerKWh
-        
-        // 容错处理：如果充值了，差值为负，此时用量计为 0
-        if usage < 0 {
-            usage = 0
-        }
+		// 计算用量 (前一次余额 - 本次余额) / 电价
+		// 记得将 int64 的分转为 float64 的元
+		usage := float64(prev.Balance-curr.Balance) / 100.0 / server.config.PricePerKWh
 
-        resp = append(resp, electricityUsageResponse{
-            StartTime: prev.RecordedAt,
-            EndTime:   curr.RecordedAt,
-            Usage:     usage,
-            Balance:   float64(curr.Balance) / 100.0,
-        })
-    }
+		// 容错处理：如果充值了，差值为负，此时用量计为 0
+		if usage < 0 {
+			usage = 0
+		}
 
-    ctx.JSON(http.StatusOK, resp)
+		resp = append(resp, electricityUsageResponse{
+			StartTime: prev.RecordedAt,
+			EndTime:   curr.RecordedAt,
+			Usage:     usage,
+			Balance:   float64(curr.Balance) / 100.0,
+		})
+	}
+
+	ctx.JSON(http.StatusOK, resp)
 }
 
 // importRecordJSON 与 testdata 包中的 RecordJSON 结构一致
@@ -194,11 +194,16 @@ func (server *Server) importElectricityRecords(ctx *gin.Context) {
 	parsed := make([]parsedRecord, 0, len(rawRecords))
 	var minT, maxT time.Time
 
+	// 导入的 JSON 时间为 GMT+8（例如国内导出数据），为了与自动抓取的 GMT+0 统一，
+	// 在解析时把时间按 +8 时区解析后转换为 UTC（减 8 小时）再入库。
+	loc := time.FixedZone("GMT+8", 8*3600)
 	for _, r := range rawRecords {
-		t, err := time.ParseInLocation(layout, r.Timestamp, time.Local)
+		tLocal, err := time.ParseInLocation(layout, r.Timestamp, loc)
 		if err != nil {
 			continue
 		}
+		// 转为 UTC，数据库中统一存储为 GMT+0
+		t := tLocal.UTC()
 		balance := int64(math.Round(r.Surplus * 100))
 		parsed = append(parsed, parsedRecord{t: t, balance: balance})
 		if minT.IsZero() || t.Before(minT) {
