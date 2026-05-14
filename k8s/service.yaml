@@ -1,0 +1,16 @@
+apiVersion: v1 # Service 是 Kubernetes 最核心的资源，版本通常为 v1
+kind: Service  # 资源类型：服务（负责网络发现和负载均衡）
+metadata:
+  name: eleclog-api-service # Service 的名字，集群内部可以通过这个名字互相访问
+spec:
+  selector: # 【核心】选择器：定义 Service 应该把流量转发给哪些 Pod
+    app: eleclog-api # 必须匹配 Deployment 中 Pod 模板定义的 labels
+  ports:
+    - name: http
+      protocol: TCP     # 传输层协议，后端 API 通常都是 TCP
+      port: 6060          # Service 暴露的端口（外界访问的端口，通常设为 80 或 443）
+      targetPort: 6060  # Pod 内部程序监听的端口（你的 Go 代码中 Listen 的端口）
+  type: LoadBalancer       # 【关键】服务类型：
+                        # ClusterIP（默认）：只能在集群内部访问，适合微服务之间通信
+                        # LoadBalancer的话，在你的环境下，MetalLB 会看到这个类型，并从 IP 池里拨一个 IP 
+                        # 把它填入 EXTERNAL-IP 字段，实现公网/局域网直接访问
