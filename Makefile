@@ -44,10 +44,14 @@ server:
 	go run main.go
 
 frontend:
-	python3 -m http.server --directory frontend/html 3000
+	python3 -m http.server --directory frontend/html 3001
 
 test:
 	go test -v -cover -short ./...
+
+image:
+	docker build -t ghcr.io/jingqi0327/eleclog:latest \
+  	--push .
 
 
 .PHONY: createdb dropdb createtestdb droptestdb migrateup migratedown migratetestup migratetestdown migrateup1 migratedown1 new_migration db_schema sqlc server test frontend

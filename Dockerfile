@@ -13,7 +13,7 @@ COPY db/migration ./db/migration
 # 复制一个启动脚本到当前阶段，这个脚本会在容器启动时执行，负责先执行数据库迁移，然后再启动应用
 COPY start.sh .
 COPY wait-for.sh .
-EXPOSE 8080
+EXPOSE 6060
 CMD ["/app/main"]
 # 使用 ENTRYPOINT 来指定容器启动时执行的命令，这里我们可以使用一个 shell 脚本来先执行数据库迁移，然后再启动应用
 ENTRYPOINT [ "/app/start.sh" ]

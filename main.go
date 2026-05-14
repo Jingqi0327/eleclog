@@ -9,7 +9,6 @@ import (
 	"github.com/Jingqi0327/eleclog/collector"
 	db "github.com/Jingqi0327/eleclog/db/sqlc"
 	"github.com/Jingqi0327/eleclog/mail"
-	_ "github.com/Jingqi0327/eleclog/testdata"
 	"github.com/Jingqi0327/eleclog/util"
 	"github.com/Jingqi0327/eleclog/worker"
 	"github.com/golang-migrate/migrate/v4"
