@@ -1,0 +1,31 @@
+apiVersion: apps/v1 # API版本，Deployment属于apps/v1（稳定版）
+kind: Deployment    # 资源类型：部署（负责Pod的自动管理、自愈和滚动更新）
+metadata:
+  name: eleclog-api-deployment # 这个Deployment对象的名字（唯一标识）
+  labels:
+    app: eleclog-api # 给Deployment自己打的标签，方便管理查找
+spec:
+  replicas: 3 # 期望状态：集群中应始终保持运行3个Pod副本
+  selector:   # 选择器：定义了Deployment“通过什么”来锁定它管理的Pod
+    matchLabels:
+      app: eleclog-api # 必须与下方template中的labels完全匹配
+  template:   # Pod模板：当副本数不足时，Deployment按此“图纸”创建新Pod
+    metadata:
+      labels:
+        app: eleclog-api # 给新建的Pod贴上的“工牌”（重要：用于被Selector识别）
+    spec:
+      hostAliases:
+      - ip: "10.0.0.17"  # 你的宿主机内网 IP
+        hostnames:
+        - "localhost"  # 你希望在Pod内访问宿主机时使用的主机名
+      imagePullSecrets:
+      - name: ghcr-login-secret
+      containers:
+      - name: eleclog-api # 容器的名字（在一个Pod里可以有多个容器，但通常一个就够了）
+        image: ghcr.io/jingqi0327/eleclog:latest # 镜像全路径（仓库地址/项目名:版本号）
+        imagePullPolicy: Always # 镜像拉取策略：每次创建Pod都从仓库拉取最新镜像（适合开发阶段）
+        env:
+        - name: RUN_MODE
+          value: backend 
+        ports:
+        - containerPort: 6060 # http API端口（必须与Go代码中Listen的端口一致）

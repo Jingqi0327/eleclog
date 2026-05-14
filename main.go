@@ -32,10 +32,19 @@ func main() {
 	runMigrate(config.MigrationURL, config.DBSource)
 	addDefaultUser(config, store)
 
+	if config.RunMode == "backend" {
+		log.Println("Running in backend mode, skipping collector and mail alerter...")
+		runGinServer(config, store)
+		return
+	}else if config.RunMode == "worker" {
+		log.Println("Running in worker mode, skipping API server...")
+		go runCollector(config, store)
+		runMailAlerter(config, store)
+		return
+	}
 	go runCollector(config, store)
 	go runMailAlerter(config, store)
 	runGinServer(config, store)
-	//testdata.Insert_data(store)
 }
 
 func runGinServer(config util.Config, store db.Store) {
