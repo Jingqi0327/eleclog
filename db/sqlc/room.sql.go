@@ -7,7 +7,8 @@ package db
 
 import (
 	"context"
-	"database/sql"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const countRooms = `-- name: CountRooms :one
@@ -16,7 +17,7 @@ SELECT count(*) FROM rooms
 
 // 统计寝室总数
 func (q *Queries) CountRooms(ctx context.Context) (int64, error) {
-	row := q.db.QueryRowContext(ctx, countRooms)
+	row := q.db.QueryRow(ctx, countRooms)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -41,7 +42,7 @@ type CreateRoomParams struct {
 
 // 插入一个要查询的寝室信息
 func (q *Queries) CreateRoom(ctx context.Context, arg CreateRoomParams) (Room, error) {
-	row := q.db.QueryRowContext(ctx, createRoom,
+	row := q.db.QueryRow(ctx, createRoom,
 		arg.Name,
 		arg.AreaID,
 		arg.BuildingCode,
@@ -68,7 +69,7 @@ WHERE id = $1
 
 // 删除寝室信息
 func (q *Queries) DeleteRoom(ctx context.Context, id int64) error {
-	_, err := q.db.ExecContext(ctx, deleteRoom, id)
+	_, err := q.db.Exec(ctx, deleteRoom, id)
 	return err
 }
 
@@ -79,7 +80,7 @@ WHERE id = $1 LIMIT 1
 
 // 根据ID查询寝室信息
 func (q *Queries) GetRoom(ctx context.Context, id int64) (Room, error) {
-	row := q.db.QueryRowContext(ctx, getRoom, id)
+	row := q.db.QueryRow(ctx, getRoom, id)
 	var i Room
 	err := row.Scan(
 		&i.ID,
@@ -107,7 +108,7 @@ type ListRoomsParams struct {
 
 // 分页查询所有寝室信息
 func (q *Queries) ListRooms(ctx context.Context, arg ListRoomsParams) ([]Room, error) {
-	rows, err := q.db.QueryContext(ctx, listRooms, arg.Limit, arg.Offset)
+	rows, err := q.db.Query(ctx, listRooms, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
@@ -127,9 +128,6 @@ func (q *Queries) ListRooms(ctx context.Context, arg ListRoomsParams) ([]Room, e
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -144,7 +142,7 @@ ORDER BY name
 
 // 查询所有寝室信息
 func (q *Queries) ListRoomsAll(ctx context.Context) ([]Room, error) {
-	rows, err := q.db.QueryContext(ctx, listRoomsAll)
+	rows, err := q.db.Query(ctx, listRoomsAll)
 	if err != nil {
 		return nil, err
 	}
@@ -164,9 +162,6 @@ func (q *Queries) ListRoomsAll(ctx context.Context) ([]Room, error) {
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -186,17 +181,17 @@ RETURNING id, name, area_id, building_code, floor_code, room_code, created_at
 `
 
 type UpdateRoomParams struct {
-	ID           int64          `json:"id"`
-	Name         sql.NullString `json:"name"`
-	AreaID       sql.NullString `json:"area_id"`
-	BuildingCode sql.NullString `json:"building_code"`
-	FloorCode    sql.NullString `json:"floor_code"`
-	RoomCode     sql.NullString `json:"room_code"`
+	ID           int64       `json:"id"`
+	Name         pgtype.Text `json:"name"`
+	AreaID       pgtype.Text `json:"area_id"`
+	BuildingCode pgtype.Text `json:"building_code"`
+	FloorCode    pgtype.Text `json:"floor_code"`
+	RoomCode     pgtype.Text `json:"room_code"`
 }
 
 // 更新寝室信息
 func (q *Queries) UpdateRoom(ctx context.Context, arg UpdateRoomParams) (Room, error) {
-	row := q.db.QueryRowContext(ctx, updateRoom,
+	row := q.db.QueryRow(ctx, updateRoom,
 		arg.ID,
 		arg.Name,
 		arg.AreaID,

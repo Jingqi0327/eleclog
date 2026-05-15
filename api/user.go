@@ -10,7 +10,7 @@ import (
 	token "github.com/Jingqi0327/eleclog/token"
 	util "github.com/Jingqi0327/eleclog/util"
 	"github.com/gin-gonic/gin"
-	"github.com/lib/pq"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type createUserRequest struct {
@@ -62,7 +62,7 @@ func (server *Server) createUser(ctx *gin.Context) {
 	user, err := server.store.CreateUser(ctx, arg)
 
 	if err != nil {
-		if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == "23505" {
+		if db.ErrorCode(err) == "23505" {
 			ctx.JSON(http.StatusForbidden, errorResponse(err))
 			return
 		}
@@ -162,14 +162,14 @@ func (server *Server) UpdateUser(ctx *gin.Context) {
 	}
 
 	if req.FullName != nil {
-		arg.FullName = sql.NullString{
+		arg.FullName = pgtype.Text{
 			String: *req.FullName,
 			Valid:  true,
 		}
 	}
 
 	if req.Email != nil {
-		arg.Email = sql.NullString{
+		arg.Email = pgtype.Text{
 			String: *req.Email,
 			Valid:  true,
 		}
@@ -181,7 +181,7 @@ func (server *Server) UpdateUser(ctx *gin.Context) {
 			ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 			return
 		}
-		arg.HashedPassword = sql.NullString{
+		arg.HashedPassword = pgtype.Text{
 			String: hashPassword,
 			Valid:  true,
 		}

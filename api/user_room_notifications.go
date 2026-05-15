@@ -9,6 +9,7 @@ import (
 	db "github.com/Jingqi0327/eleclog/db/sqlc"
 	token "github.com/Jingqi0327/eleclog/token"
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type createUserRoomNotificationRequest struct {
@@ -110,10 +111,10 @@ func (server *Server) listUserRoomNotifications(ctx *gin.Context) {
 	}
 
 	username := getAuthorizedUsername(ctx)
-	arg:=db.ListUserRoomNotificationsByUserParams{
+	arg := db.ListUserRoomNotificationsByUserParams{
 		Username: username,
-		Limit: req.PageSize,
-		Offset: (req.PageID-1)*req.PageSize,
+		Limit:    req.PageSize,
+		Offset:   (req.PageID - 1) * req.PageSize,
 	}
 	notifications, err := server.store.ListUserRoomNotificationsByUser(ctx, arg)
 	if err != nil {
@@ -166,11 +167,11 @@ func (server *Server) updateUserRoomNotification(ctx *gin.Context) {
 	}
 
 	if req.Threshold != nil {
-		arg.Threshold = sql.NullInt32{Int32: *req.Threshold, Valid: true}
+		arg.Threshold = pgtype.Int4{Int32: *req.Threshold, Valid: true}
 	}
 
 	if req.IsEnabled != nil {
-		arg.IsEnabled = sql.NullBool{Bool: *req.IsEnabled, Valid: true}
+		arg.IsEnabled = pgtype.Bool{Bool: *req.IsEnabled, Valid: true}
 	}
 
 	notification, err := server.store.UpdateUserRoomNotification(ctx, arg)

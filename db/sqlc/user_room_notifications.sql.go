@@ -7,8 +7,9 @@ package db
 
 import (
 	"context"
-	"database/sql"
 	"time"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const countUserRoomNotifications = `-- name: CountUserRoomNotifications :one
@@ -17,7 +18,7 @@ SELECT COUNT(*) FROM user_room_notifications
 
 // 统计通知订阅总数
 func (q *Queries) CountUserRoomNotifications(ctx context.Context) (int64, error) {
-	row := q.db.QueryRowContext(ctx, countUserRoomNotifications)
+	row := q.db.QueryRow(ctx, countUserRoomNotifications)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -40,7 +41,7 @@ type CreateUserRoomNotificationParams struct {
 
 // 创建用户-寝室通知订阅
 func (q *Queries) CreateUserRoomNotification(ctx context.Context, arg CreateUserRoomNotificationParams) (UserRoomNotification, error) {
-	row := q.db.QueryRowContext(ctx, createUserRoomNotification, arg.Username, arg.RoomID, arg.Threshold)
+	row := q.db.QueryRow(ctx, createUserRoomNotification, arg.Username, arg.RoomID, arg.Threshold)
 	var i UserRoomNotification
 	err := row.Scan(
 		&i.Username,
@@ -65,7 +66,7 @@ type DeleteUserRoomNotificationParams struct {
 
 // 删除通知订阅
 func (q *Queries) DeleteUserRoomNotification(ctx context.Context, arg DeleteUserRoomNotificationParams) error {
-	_, err := q.db.ExecContext(ctx, deleteUserRoomNotification, arg.Username, arg.RoomID)
+	_, err := q.db.Exec(ctx, deleteUserRoomNotification, arg.Username, arg.RoomID)
 	return err
 }
 
@@ -83,7 +84,7 @@ type GetUserRoomNotificationParams struct {
 
 // 查询单个通知订阅
 func (q *Queries) GetUserRoomNotification(ctx context.Context, arg GetUserRoomNotificationParams) (UserRoomNotification, error) {
-	row := q.db.QueryRowContext(ctx, getUserRoomNotification, arg.Username, arg.RoomID)
+	row := q.db.QueryRow(ctx, getUserRoomNotification, arg.Username, arg.RoomID)
 	var i UserRoomNotification
 	err := row.Scan(
 		&i.Username,
@@ -110,7 +111,7 @@ type ListDueUserRoomNotificationsRow struct {
 
 // 查询需要发送通知的订阅（开启且上次通知时间超过 24 小时）
 func (q *Queries) ListDueUserRoomNotifications(ctx context.Context) ([]ListDueUserRoomNotificationsRow, error) {
-	rows, err := q.db.QueryContext(ctx, listDueUserRoomNotifications)
+	rows, err := q.db.Query(ctx, listDueUserRoomNotifications)
 	if err != nil {
 		return nil, err
 	}
@@ -122,9 +123,6 @@ func (q *Queries) ListDueUserRoomNotifications(ctx context.Context) ([]ListDueUs
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -146,7 +144,7 @@ type ListUserRoomNotificationsParams struct {
 
 // 分页查询通知订阅
 func (q *Queries) ListUserRoomNotifications(ctx context.Context, arg ListUserRoomNotificationsParams) ([]UserRoomNotification, error) {
-	rows, err := q.db.QueryContext(ctx, listUserRoomNotifications, arg.Limit, arg.Offset)
+	rows, err := q.db.Query(ctx, listUserRoomNotifications, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
@@ -164,9 +162,6 @@ func (q *Queries) ListUserRoomNotifications(ctx context.Context, arg ListUserRoo
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -182,7 +177,7 @@ ORDER BY username ASC
 
 // 查询某个寝室的全部通知订阅
 func (q *Queries) ListUserRoomNotificationsByRoom(ctx context.Context, roomID int64) ([]UserRoomNotification, error) {
-	rows, err := q.db.QueryContext(ctx, listUserRoomNotificationsByRoom, roomID)
+	rows, err := q.db.Query(ctx, listUserRoomNotificationsByRoom, roomID)
 	if err != nil {
 		return nil, err
 	}
@@ -200,9 +195,6 @@ func (q *Queries) ListUserRoomNotificationsByRoom(ctx context.Context, roomID in
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -226,7 +218,7 @@ type ListUserRoomNotificationsByUserParams struct {
 
 // 查询某个用户的全部通知订阅
 func (q *Queries) ListUserRoomNotificationsByUser(ctx context.Context, arg ListUserRoomNotificationsByUserParams) ([]UserRoomNotification, error) {
-	rows, err := q.db.QueryContext(ctx, listUserRoomNotificationsByUser, arg.Username, arg.Limit, arg.Offset)
+	rows, err := q.db.Query(ctx, listUserRoomNotificationsByUser, arg.Username, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
@@ -245,9 +237,6 @@ func (q *Queries) ListUserRoomNotificationsByUser(ctx context.Context, arg ListU
 		}
 		items = append(items, i)
 	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
@@ -264,15 +253,15 @@ RETURNING username, room_id, threshold, is_enabled, last_notified_at
 `
 
 type UpdateUserRoomNotificationParams struct {
-	Username  string        `json:"username"`
-	RoomID    int64         `json:"room_id"`
-	Threshold sql.NullInt32 `json:"threshold"`
-	IsEnabled sql.NullBool  `json:"is_enabled"`
+	Username  string      `json:"username"`
+	RoomID    int64       `json:"room_id"`
+	Threshold pgtype.Int4 `json:"threshold"`
+	IsEnabled pgtype.Bool `json:"is_enabled"`
 }
 
 // 更新通知阈值和开关
 func (q *Queries) UpdateUserRoomNotification(ctx context.Context, arg UpdateUserRoomNotificationParams) (UserRoomNotification, error) {
-	row := q.db.QueryRowContext(ctx, updateUserRoomNotification,
+	row := q.db.QueryRow(ctx, updateUserRoomNotification,
 		arg.Username,
 		arg.RoomID,
 		arg.Threshold,
@@ -305,7 +294,7 @@ type UpdateUserRoomNotificationLastNotifiedAtParams struct {
 
 // 更新最后通知时间
 func (q *Queries) UpdateUserRoomNotificationLastNotifiedAt(ctx context.Context, arg UpdateUserRoomNotificationLastNotifiedAtParams) (UserRoomNotification, error) {
-	row := q.db.QueryRowContext(ctx, updateUserRoomNotificationLastNotifiedAt, arg.Username, arg.RoomID, arg.LastNotifiedAt)
+	row := q.db.QueryRow(ctx, updateUserRoomNotificationLastNotifiedAt, arg.Username, arg.RoomID, arg.LastNotifiedAt)
 	var i UserRoomNotification
 	err := row.Scan(
 		&i.Username,

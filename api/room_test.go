@@ -17,6 +17,7 @@ import (
 	"github.com/Jingqi0327/eleclog/util"
 	"github.com/gin-gonic/gin"
 	"github.com/golang/mock/gomock"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/stretchr/testify/require"
 )
 
@@ -50,7 +51,7 @@ func TestCreateRoomAPI(t *testing.T) {
 			},
 			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusOK, recorder.Code)
-				checkRoomResponse(t,recorder.Body,room)
+				checkRoomResponse(t, recorder.Body, room)
 			},
 		},
 	}
@@ -319,7 +320,7 @@ func TestUpdateRoomAPI(t *testing.T) {
 			buildStubs: func(store *mockdb.MockStore) {
 				arg := db.UpdateRoomParams{
 					ID:   room.ID,
-					Name: sql.NullString{String: newName, Valid: true},
+					Name: pgtype.Text{String: newName, Valid: true},
 				}
 				updatedRoom := room
 				updatedRoom.Name = newName

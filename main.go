@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"database/sql"
 	"log"
 
 	"github.com/Jingqi0327/eleclog/api"
@@ -14,7 +13,8 @@ import (
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
-	_ "github.com/lib/pq"
+	_ "github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 func main() {
@@ -23,16 +23,16 @@ func main() {
 		log.Fatal("cannot load config")
 	}
 
-	conn, err := sql.Open(config.DBDriver, config.DBSource)
+	connPool, err := pgxpool.New(context.Background(), config.DBSource)
 	if err != nil {
 		log.Fatal("cannot connect to db:", err)
 	}
 
-	store := db.NewStore(conn)
+	store := db.NewStore(connPool)
 	runMigrate(config.MigrationURL, config.DBSource)
 	addDefaultUser(config, store)
 
-	switch config.RunMode{
+	switch config.RunMode {
 	case "backend":
 		log.Println("Running in backend mode, skipping collector and mail alerter...")
 		runGinServer(config, store)

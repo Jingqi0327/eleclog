@@ -2,11 +2,11 @@ package db
 
 import (
 	"context"
-	"database/sql"
 	"testing"
 	"time"
 
 	"github.com/Jingqi0327/eleclog/util"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/stretchr/testify/require"
 )
 
@@ -62,9 +62,9 @@ func TestUpdateUser(t *testing.T) {
 
 	arg := UpdateUserParams{
 		Username:       user1.Username,
-		HashedPassword: sql.NullString{String: newPassword, Valid: true},
-		FullName:       sql.NullString{String: newFullName, Valid: true},
-		Email:          sql.NullString{String: newEmail, Valid: true},
+		HashedPassword: pgtype.Text{String: newPassword, Valid: true},
+		FullName:       pgtype.Text{String: newFullName, Valid: true},
+		Email:          pgtype.Text{String: newEmail, Valid: true},
 	}
 
 	user2, err := testStore.UpdateUser(context.Background(), arg)

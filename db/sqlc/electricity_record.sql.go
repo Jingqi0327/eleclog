@@ -26,7 +26,7 @@ type CreateElectricityRecordParams struct {
 
 // 插入一条电费记录
 func (q *Queries) CreateElectricityRecord(ctx context.Context, arg CreateElectricityRecordParams) (ElectricityRecord, error) {
-	row := q.db.QueryRowContext(ctx, createElectricityRecord, arg.RoomID, arg.Balance)
+	row := q.db.QueryRow(ctx, createElectricityRecord, arg.RoomID, arg.Balance)
 	var i ElectricityRecord
 	err := row.Scan(
 		&i.ID,
@@ -54,7 +54,7 @@ type CreateElectricityRecordwithTimeParams struct {
 
 // 用于插入测试数据的电费记录
 func (q *Queries) CreateElectricityRecordwithTime(ctx context.Context, arg CreateElectricityRecordwithTimeParams) (ElectricityRecord, error) {
-	row := q.db.QueryRowContext(ctx, createElectricityRecordwithTime, arg.RoomID, arg.Balance, arg.RecordedAt)
+	row := q.db.QueryRow(ctx, createElectricityRecordwithTime, arg.RoomID, arg.Balance, arg.RecordedAt)
 	var i ElectricityRecord
 	err := row.Scan(
 		&i.ID,
@@ -74,7 +74,7 @@ LIMIT 1
 
 // 获取最新的余额记录
 func (q *Queries) GetLatestBalance(ctx context.Context, roomID int64) (ElectricityRecord, error) {
-	row := q.db.QueryRowContext(ctx, getLatestBalance, roomID)
+	row := q.db.QueryRow(ctx, getLatestBalance, roomID)
 	var i ElectricityRecord
 	err := row.Scan(
 		&i.ID,
@@ -99,7 +99,7 @@ type GetRecordedAtsByRangeParams struct {
 
 // 获取指定时间范围内已有记录的时间戳列表（用于导入去重）
 func (q *Queries) GetRecordedAtsByRange(ctx context.Context, arg GetRecordedAtsByRangeParams) ([]time.Time, error) {
-	rows, err := q.db.QueryContext(ctx, getRecordedAtsByRange, arg.RoomID, arg.StartTime, arg.EndTime)
+	rows, err := q.db.Query(ctx, getRecordedAtsByRange, arg.RoomID, arg.StartTime, arg.EndTime)
 	if err != nil {
 		return nil, err
 	}
@@ -111,9 +111,6 @@ func (q *Queries) GetRecordedAtsByRange(ctx context.Context, arg GetRecordedAtsB
 			return nil, err
 		}
 		items = append(items, recorded_at)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -136,7 +133,7 @@ type GetRecordsByHourRangeParams struct {
 
 // 获取指定时间范围内的每小时记录
 func (q *Queries) GetRecordsByHourRange(ctx context.Context, arg GetRecordsByHourRangeParams) ([]ElectricityRecord, error) {
-	rows, err := q.db.QueryContext(ctx, getRecordsByHourRange, arg.RoomID, arg.StartTime, arg.EndTime)
+	rows, err := q.db.Query(ctx, getRecordsByHourRange, arg.RoomID, arg.StartTime, arg.EndTime)
 	if err != nil {
 		return nil, err
 	}
@@ -153,9 +150,6 @@ func (q *Queries) GetRecordsByHourRange(ctx context.Context, arg GetRecordsByHou
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err

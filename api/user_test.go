@@ -16,7 +16,7 @@ import (
 	"github.com/Jingqi0327/eleclog/util"
 	"github.com/gin-gonic/gin"
 	"github.com/golang/mock/gomock"
-	"github.com/lib/pq"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/stretchr/testify/require"
 )
 
@@ -114,7 +114,7 @@ func TestCreateUserAPI(t *testing.T) {
 				store.EXPECT().
 					CreateUser(gomock.Any(), gomock.Any()).
 					Times(1).
-					Return(db.User{}, &pq.Error{Code: "23505"})
+					Return(db.User{}, db.ErrUniqueViolation)
 			},
 			checkResponse: func(recorder *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusForbidden, recorder.Code)
@@ -351,9 +351,9 @@ func TestUpdateUserAPI(t *testing.T) {
 			buildStubs: func(store *mockdb.MockStore) {
 				arg := db.UpdateUserParams{
 					Username:       user.Username,
-					HashedPassword: sql.NullString{String: user.HashedPassword, Valid: true},
-					FullName:       sql.NullString{String: user.FullName, Valid: true},
-					Email:          sql.NullString{String: user.Email, Valid: true},
+					HashedPassword: pgtype.Text{String: user.HashedPassword, Valid: true},
+					FullName:       pgtype.Text{String: user.FullName, Valid: true},
+					Email:          pgtype.Text{String: user.Email, Valid: true},
 				}
 				store.EXPECT().
 					UpdateUser(gomock.Any(), EqUpdateUserParams(arg, password)).
@@ -386,7 +386,7 @@ func TestUpdateUserAPI(t *testing.T) {
 			},
 		},
 		{
-			name: "UpdateOtherUser",	
+			name: "UpdateOtherUser",
 			body: gin.H{
 				"username":  user.Username,
 				"password":  password,

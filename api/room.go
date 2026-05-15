@@ -8,6 +8,7 @@ import (
 
 	db "github.com/Jingqi0327/eleclog/db/sqlc"
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type createRoomRequest struct {
@@ -178,23 +179,23 @@ func (server *Server) updateRoom(ctx *gin.Context) {
 	}
 
 	if req.Name != nil {
-		arg.Name = sql.NullString{String: *req.Name, Valid: true}
+		arg.Name = pgtype.Text{String: *req.Name, Valid: true}
 	}
 
 	if req.AreaID != nil {
-		arg.AreaID = sql.NullString{String: *req.AreaID, Valid: true}
+		arg.AreaID = pgtype.Text{String: *req.AreaID, Valid: true}
 	}
 
 	if req.BuildingCode != nil {
-		arg.BuildingCode = sql.NullString{String: *req.BuildingCode, Valid: true}
+		arg.BuildingCode = pgtype.Text{String: *req.BuildingCode, Valid: true}
 	}
 
 	if req.FloorCode != nil {
-		arg.FloorCode = sql.NullString{String: *req.FloorCode, Valid: true}
+		arg.FloorCode = pgtype.Text{String: *req.FloorCode, Valid: true}
 	}
 
 	if req.RoomCode != nil {
-		arg.RoomCode = sql.NullString{String: *req.RoomCode, Valid: true}
+		arg.RoomCode = pgtype.Text{String: *req.RoomCode, Valid: true}
 	}
 
 	room, err := server.store.UpdateRoom(ctx, arg)

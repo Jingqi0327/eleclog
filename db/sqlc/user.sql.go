@@ -7,7 +7,8 @@ package db
 
 import (
 	"context"
-	"database/sql"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const countUsers = `-- name: CountUsers :one
@@ -16,7 +17,7 @@ SELECT COUNT(*) FROM users
 
 // 查询用户个数
 func (q *Queries) CountUsers(ctx context.Context) (int64, error) {
-	row := q.db.QueryRowContext(ctx, countUsers)
+	row := q.db.QueryRow(ctx, countUsers)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -40,7 +41,7 @@ type CreateUserParams struct {
 
 // 创建用户
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
-	row := q.db.QueryRowContext(ctx, createUser,
+	row := q.db.QueryRow(ctx, createUser,
 		arg.Username,
 		arg.HashedPassword,
 		arg.FullName,
@@ -65,7 +66,7 @@ LIMIT 1
 
 // 查询单个用户
 func (q *Queries) GetUser(ctx context.Context, username string) (User, error) {
-	row := q.db.QueryRowContext(ctx, getUser, username)
+	row := q.db.QueryRow(ctx, getUser, username)
 	var i User
 	err := row.Scan(
 		&i.Username,
@@ -89,15 +90,15 @@ RETURNING username, hashed_password, full_name, email, created_at
 `
 
 type UpdateUserParams struct {
-	Username       string         `json:"username"`
-	HashedPassword sql.NullString `json:"hashed_password"`
-	FullName       sql.NullString `json:"full_name"`
-	Email          sql.NullString `json:"email"`
+	Username       string      `json:"username"`
+	HashedPassword pgtype.Text `json:"hashed_password"`
+	FullName       pgtype.Text `json:"full_name"`
+	Email          pgtype.Text `json:"email"`
 }
 
 // 更新用户信息
 func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error) {
-	row := q.db.QueryRowContext(ctx, updateUser,
+	row := q.db.QueryRow(ctx, updateUser,
 		arg.Username,
 		arg.HashedPassword,
 		arg.FullName,

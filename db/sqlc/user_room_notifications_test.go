@@ -2,11 +2,12 @@ package db
 
 import (
 	"context"
-	"database/sql"
+
 	"testing"
 	"time"
 
 	"github.com/Jingqi0327/eleclog/util"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/stretchr/testify/require"
 )
 
@@ -71,7 +72,7 @@ func TestDeleteUserRoomNotification(t *testing.T) {
 	}
 	notif2, err := testStore.GetUserRoomNotification(context.Background(), argGet)
 	require.Error(t, err)
-	require.EqualError(t, err, sql.ErrNoRows.Error())
+	require.EqualError(t, err, ErrRecordNotFound.Error())
 	require.Empty(t, notif2)
 }
 
@@ -84,8 +85,8 @@ func TestUpdateUserRoomNotification(t *testing.T) {
 	arg := UpdateUserRoomNotificationParams{
 		Username:  notif1.Username,
 		RoomID:    notif1.RoomID,
-		Threshold: sql.NullInt32{Int32: newThreshold, Valid: true},
-		IsEnabled: sql.NullBool{Bool: newIsEnabled, Valid: true},
+		Threshold: pgtype.Int4{Int32: newThreshold, Valid: true},
+		IsEnabled: pgtype.Bool{Bool: newIsEnabled, Valid: true},
 	}
 
 	notif2, err := testStore.UpdateUserRoomNotification(context.Background(), arg)
@@ -151,13 +152,13 @@ func TestListUserRoomNotificationsByUser(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	arg:=ListUserRoomNotificationsByUserParams{
+	arg := ListUserRoomNotificationsByUserParams{
 		Username: user.Username,
-		Limit: 5,
-		Offset: 0,
+		Limit:    5,
+		Offset:   0,
 	}
 
-	notifs, err := testStore.ListUserRoomNotificationsByUser(context.Background(),arg)
+	notifs, err := testStore.ListUserRoomNotificationsByUser(context.Background(), arg)
 	require.NoError(t, err)
 	require.Len(t, notifs, 5)
 

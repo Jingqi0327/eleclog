@@ -17,6 +17,7 @@ import (
 	"github.com/Jingqi0327/eleclog/util"
 	"github.com/gin-gonic/gin"
 	"github.com/golang/mock/gomock"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/stretchr/testify/require"
 )
 
@@ -312,10 +313,10 @@ func TestListUserRoomNotificationsAPI(t *testing.T) {
 				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, username, time.Minute)
 			},
 			buildStubs: func(store *mockdb.MockStore) {
-				arg:=db.ListUserRoomNotificationsByUserParams{
+				arg := db.ListUserRoomNotificationsByUserParams{
 					Username: username,
-					Limit: 5,
-					Offset: 0,
+					Limit:    5,
+					Offset:   0,
 				}
 				store.EXPECT().
 					ListUserRoomNotificationsByUser(gomock.Any(), gomock.Eq(arg)).
@@ -438,8 +439,8 @@ func TestUpdateUserRoomNotificationAPI(t *testing.T) {
 				arg := db.UpdateUserRoomNotificationParams{
 					Username:  notification.Username,
 					RoomID:    notification.RoomID,
-					Threshold: sql.NullInt32{Int32: newThreshold, Valid: true},
-					IsEnabled: sql.NullBool{Bool: newIsEnabled, Valid: true},
+					Threshold: pgtype.Int4{Int32: newThreshold, Valid: true},
+					IsEnabled: pgtype.Bool{Bool: newIsEnabled, Valid: true},
 				}
 				updatedNotification := notification
 				updatedNotification.Threshold = newThreshold

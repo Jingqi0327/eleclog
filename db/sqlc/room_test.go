@@ -2,11 +2,11 @@ package db
 
 import (
 	"context"
-	"database/sql"
 	"testing"
 	"time"
 
 	"github.com/Jingqi0327/eleclog/util"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/stretchr/testify/require"
 )
 
@@ -96,7 +96,7 @@ func TestDeleteRoom(t *testing.T) {
 
 	room2, err := testStore.GetRoom(context.Background(), room1.ID)
 	require.Error(t, err)
-	require.EqualError(t, err, sql.ErrNoRows.Error())
+	require.EqualError(t, err, ErrRecordNotFound.Error())
 	require.Empty(t, room2)
 }
 
@@ -111,11 +111,11 @@ func TestUpdateRoom(t *testing.T) {
 
 	arg := UpdateRoomParams{
 		ID:           room1.ID,
-		Name:         sql.NullString{String: newName, Valid: true},
-		AreaID:       sql.NullString{String: newAreaID, Valid: true},
-		BuildingCode: sql.NullString{String: newBuildingCode, Valid: true},
-		FloorCode:    sql.NullString{String: newFloorCode, Valid: true},
-		RoomCode:     sql.NullString{String: newRoomCode, Valid: true},
+		Name:         pgtype.Text{String: newName, Valid: true},
+		AreaID:       pgtype.Text{String: newAreaID, Valid: true},
+		BuildingCode: pgtype.Text{String: newBuildingCode, Valid: true},
+		FloorCode:    pgtype.Text{String: newFloorCode, Valid: true},
+		RoomCode:     pgtype.Text{String: newRoomCode, Valid: true},
 	}
 
 	room2, err := testStore.UpdateRoom(context.Background(), arg)
