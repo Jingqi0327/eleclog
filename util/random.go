@@ -61,3 +61,7 @@ func RandomTime() time.Time {
 	sec := rand.Int63n(delta) + min
 	return time.Unix(sec, 0)
 }
+
+func RandomEmail() string {
+	return RandomString(6) + "@" + RandomString(4) + ".com"
+}

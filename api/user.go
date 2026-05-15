@@ -10,6 +10,7 @@ import (
 	token "github.com/Jingqi0327/eleclog/token"
 	util "github.com/Jingqi0327/eleclog/util"
 	"github.com/gin-gonic/gin"
+	"github.com/lib/pq"
 )
 
 type createUserRequest struct {
@@ -61,8 +62,8 @@ func (server *Server) createUser(ctx *gin.Context) {
 	user, err := server.store.CreateUser(ctx, arg)
 
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			ctx.JSON(http.StatusNotFound, errorResponse(err))
+		if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == "23505" {
+			ctx.JSON(http.StatusForbidden, errorResponse(err))
 			return
 		}
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
