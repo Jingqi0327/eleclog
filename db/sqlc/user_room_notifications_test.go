@@ -140,7 +140,7 @@ func TestListUserRoomNotifications(t *testing.T) {
 func TestListUserRoomNotificationsByUser(t *testing.T) {
 	user := createRandomUser(t)
 
-	for i := 0; i < 5; i++ {
+	for i := 0; i < 10; i++ {
 		room := createRandomRoom(t)
 		arg := CreateUserRoomNotificationParams{
 			Username:  user.Username,
@@ -151,7 +151,13 @@ func TestListUserRoomNotificationsByUser(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	notifs, err := testStore.ListUserRoomNotificationsByUser(context.Background(), user.Username)
+	arg:=ListUserRoomNotificationsByUserParams{
+		Username: user.Username,
+		Limit: 5,
+		Offset: 0,
+	}
+
+	notifs, err := testStore.ListUserRoomNotificationsByUser(context.Background(),arg)
 	require.NoError(t, err)
 	require.Len(t, notifs, 5)
 

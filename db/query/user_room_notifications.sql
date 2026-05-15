@@ -18,7 +18,9 @@ LIMIT 1;
 -- 查询某个用户的全部通知订阅
 SELECT * FROM user_room_notifications
 WHERE username = $1
-ORDER BY room_id ASC;
+ORDER BY room_id ASC
+LIMIT $2
+OFFSET $3;
 
 -- name: ListUserRoomNotificationsByRoom :many
 -- 查询某个寝室的全部通知订阅

@@ -350,7 +350,7 @@ func (mr *MockStoreMockRecorder) ListUserRoomNotificationsByRoom(arg0, arg1 inte
 }
 
 // ListUserRoomNotificationsByUser mocks base method.
-func (m *MockStore) ListUserRoomNotificationsByUser(arg0 context.Context, arg1 string) ([]db.UserRoomNotification, error) {
+func (m *MockStore) ListUserRoomNotificationsByUser(arg0 context.Context, arg1 db.ListUserRoomNotificationsByUserParams) ([]db.UserRoomNotification, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListUserRoomNotificationsByUser", arg0, arg1)
 	ret0, _ := ret[0].([]db.UserRoomNotification)

@@ -312,8 +312,13 @@ func TestListUserRoomNotificationsAPI(t *testing.T) {
 				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, username, time.Minute)
 			},
 			buildStubs: func(store *mockdb.MockStore) {
+				arg:=db.ListUserRoomNotificationsByUserParams{
+					Username: username,
+					Limit: 5,
+					Offset: 0,
+				}
 				store.EXPECT().
-					ListUserRoomNotificationsByUser(gomock.Any(), gomock.Eq(username)).
+					ListUserRoomNotificationsByUser(gomock.Any(), gomock.Eq(arg)).
 					Times(1).
 					Return(notifications, nil)
 			},

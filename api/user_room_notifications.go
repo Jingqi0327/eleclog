@@ -110,7 +110,12 @@ func (server *Server) listUserRoomNotifications(ctx *gin.Context) {
 	}
 
 	username := getAuthorizedUsername(ctx)
-	notifications, err := server.store.ListUserRoomNotificationsByUser(ctx, username)
+	arg:=db.ListUserRoomNotificationsByUserParams{
+		Username: username,
+		Limit: req.PageSize,
+		Offset: (req.PageID-1)*req.PageSize,
+	}
+	notifications, err := server.store.ListUserRoomNotificationsByUser(ctx, arg)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return

@@ -214,11 +214,19 @@ const listUserRoomNotificationsByUser = `-- name: ListUserRoomNotificationsByUse
 SELECT username, room_id, threshold, is_enabled, last_notified_at FROM user_room_notifications
 WHERE username = $1
 ORDER BY room_id ASC
+LIMIT $2
+OFFSET $3
 `
 
+type ListUserRoomNotificationsByUserParams struct {
+	Username string `json:"username"`
+	Limit    int32  `json:"limit"`
+	Offset   int32  `json:"offset"`
+}
+
 // 查询某个用户的全部通知订阅
-func (q *Queries) ListUserRoomNotificationsByUser(ctx context.Context, username string) ([]UserRoomNotification, error) {
-	rows, err := q.db.QueryContext(ctx, listUserRoomNotificationsByUser, username)
+func (q *Queries) ListUserRoomNotificationsByUser(ctx context.Context, arg ListUserRoomNotificationsByUserParams) ([]UserRoomNotification, error) {
+	rows, err := q.db.QueryContext(ctx, listUserRoomNotificationsByUser, arg.Username, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}

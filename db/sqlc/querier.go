@@ -53,7 +53,7 @@ type Querier interface {
 	// 查询某个寝室的全部通知订阅
 	ListUserRoomNotificationsByRoom(ctx context.Context, roomID int64) ([]UserRoomNotification, error)
 	// 查询某个用户的全部通知订阅
-	ListUserRoomNotificationsByUser(ctx context.Context, username string) ([]UserRoomNotification, error)
+	ListUserRoomNotificationsByUser(ctx context.Context, arg ListUserRoomNotificationsByUserParams) ([]UserRoomNotification, error)
 	// 更新寝室信息
 	UpdateRoom(ctx context.Context, arg UpdateRoomParams) (Room, error)
 	//更新用户信息
