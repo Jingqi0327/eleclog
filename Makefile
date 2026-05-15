@@ -49,9 +49,13 @@ frontend:
 test:
 	go test -v -cover -short ./...
 
+mock:
+	mockgen -destination db/mock/store.go -package mockdb github.com/Jingqi0327/eleclog/db/sqlc Store 
+
 image:
-	docker build -t ghcr.io/jingqi0327/eleclog:latest \
+	docker buildx build --platform linux/amd64,linux/arm64 \
+  	-t ghcr.io/jingqi0327/eleclog:latest \
   	--push .
 
 
-.PHONY: createdb dropdb createtestdb droptestdb migrateup migratedown migratetestup migratetestdown migrateup1 migratedown1 new_migration db_schema sqlc server test frontend
+.PHONY: createdb dropdb createtestdb droptestdb migrateup migratedown migratetestup migratetestdown migrateup1 migratedown1 new_migration db_schema sqlc server test frontend mock image
