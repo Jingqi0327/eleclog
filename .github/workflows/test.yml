@@ -1,0 +1,65 @@
+name: Run unit tests
+
+on:
+    push:
+        branches:
+            - main
+    pull_request:
+        branches:
+            - main
+
+jobs:
+  test:
+    name: Test #job的名字
+    runs-on: ubuntu-latest #程序运行的地方，类似于一个虚拟机吧
+
+    services:
+      # 数据库服务，我们的程序需要连接数据库
+      postgres:
+        image: postgres:alpine3.23 # Docker镜像
+        env:
+          POSTGRES_USER: root # 数据库用户名
+          POSTGRES_PASSWORD: 123456 # 数据库密码
+          POSTGRES_DB: elec_log # 默认数据库
+        ports:
+            - 5432:5432 # 映射端口
+        # 告诉Runner Postgres是否已经成功启动
+        options: >-
+          --health-cmd="pg_isready -U root -d elec_log"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+    # 把代码复制到虚拟机里
+    - name: Check out code 
+      uses: actions/checkout@v4
+    # 设置Go的环境
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.25.8' #指定Go的版本
+    # 安装golang-migrate
+    - name: Install golang-migrate
+      run: |
+        curl -L https://github.com/golang-migrate/migrate/releases/download/v4.19.1/migrate.linux-amd64.tar.gz | tar xvz 
+        sudo mv migrate /usr/local/bin/migrate
+    # 生成用于测试的 app.env 配置文件
+    - name: Create app.env
+      run: |
+        touch app.env
+        echo "DB_DRIVER=postgres" >> app.env
+        echo "DB_SOURCE=postgresql://root:123456@localhost:5432/elec_log?sslmode=disable" >> app.env
+        echo "TEST_DB_SOURCE=postgresql://root:123456@localhost:5432/elec_log?sslmode=disable" >> app.env
+        echo "TOKEN_SYMMETRIC_KEY=12345678901234567890123456789012" >> app.env
+        echo "ACCESS_TOKEN_DURATION=15m" >> app.env
+        echo "REFRESH_TOKEN_DURATION=24h" >> app.env
+        echo "PRICE_PER_KWH=0.5" >> app.env
+        # 如果你的测试需要真实的密码/Token等，可以利用 GitHub Secrets：
+        # echo "SHIRO_JID=${{ secrets.SHIRO_JID }}" >> app.env
+    # 迁移数据库
+    - name: Run migration
+      run: make migrateup
+    # 运行测试
+    - name: Test
+      run: make test #go test -v ./... 我们在Makefile里定义了
