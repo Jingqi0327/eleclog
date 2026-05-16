@@ -17,6 +17,7 @@ type Server struct {
 }
 
 func NewServer(config util.Config, store db.Store) (*Server, error) {
+	gin.SetMode(gin.ReleaseMode)
 	tokenMaker, err := token.NewPasetoMaker(config.TokenSymmetricKey)
 	if err != nil {
 		return nil, fmt.Errorf("cannot create token maker: %w", err)
@@ -34,7 +35,8 @@ func NewServer(config util.Config, store db.Store) (*Server, error) {
 }
 
 func (server *Server) setupRouter() {
-	router := gin.Default()
+	// router := gin.Default()
+	router := gin.New()
 
 	// 启用CORS支持
 	router.Use(func(c *gin.Context) {
@@ -50,6 +52,8 @@ func (server *Server) setupRouter() {
 
 		c.Next()
 	})
+
+	router.Use(GinLogger(), GinRecovery(true))
 
 	authRoutes := router.Group("/").Use(authMiddleware(server))
 	authRoutes.POST("/rooms", server.createRoom)
