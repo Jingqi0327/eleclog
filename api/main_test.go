@@ -6,12 +6,14 @@ import (
 	"time"
 
 	db "github.com/Jingqi0327/eleclog/db/sqlc"
+	"github.com/Jingqi0327/eleclog/logger"
 	"github.com/Jingqi0327/eleclog/util"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/require"
 )
 
 func newTestServer(t *testing.T, store db.Store) *Server {
+	logger.InitLogger(true)
 	config := util.Config{
 		TokenSymmetricKey:   util.RandomString(32),
 		AccessTokenDuration: time.Minute,
