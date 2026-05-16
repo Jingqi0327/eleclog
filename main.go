@@ -69,7 +69,8 @@ func runGinServer(config util.Config, store db.Store) {
 	if err != nil {
 		logger.Log.Fatal("cannot create server:", zap.Error(err))
 	}
-
+	
+	logger.Log.Info(">> API server started successfully...")
 	err = server.Start(config.HTTPServerAddress)
 	if err != nil {
 		logger.Log.Fatal("cannot start server:", zap.Error(err))
