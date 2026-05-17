@@ -1,0 +1,110 @@
+name: Deploy to production
+
+# 触发条件
+on:
+  # 仅在主分支 main 上有推送时才触发
+  push:
+    branches: [ "main" ]
+
+env:
+  # GitHub Container Registry 地址
+  REGISTRY: ghcr.io
+  # 格式为 <account>/<repo>
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  deploy:
+    name: Deploy to K8s
+    runs-on: ubuntu-latest 
+    permissions:
+      contents: read  # 必须：允许 actions/checkout 读取你的代码进行构建
+      packages: write # 必须：允许 actions/upload-package-artifact 上传构建好的镜像到 GHCR
+      id-token: write
+
+    steps:
+    # 1. 检出代码到运行环境
+    - name: Check out code 
+      uses: actions/checkout@v4
+
+    # 2. 安装 kubectl CLI 工具
+    - name: Install kubectl
+      uses: azure/setup-kubectl@v4
+      id: install
+      
+    # 3. 注入环境变量到 app.env 文件
+    - name: Generate app.env
+      run: |
+        touch app.env
+        echo "ENVIRONMENT=development" >> app.env
+        echo "RUN_MODE=full" >> app.env
+        echo "DB_DRIVER=postgres" >> app.env
+        echo "DB_SOURCE=postgresql://root:123456@localhost:5432/elec_log?sslmode=disable" >> app.env
+        echo "MIGRATION_URL=file://db/migration" >> app.env
+        echo "HTTP_SERVER_ADDRESS=0.0.0.0:6060" >> app.env
+        echo "TOKEN_SYMMETRIC_KEY=${{ secrets.TOKEN_SYMMETRIC_KEY }}" >> app.env
+        echo "ACCESS_TOKEN_DURATION=${{ secrets.ACCESS_TOKEN_DURATION }}" >> app.env
+        echo "PRICE_PER_KWH=0.53" >> app.env
+        echo "SHIRO_JID=${{ secrets.SHIRO_JID }}" >> app.env
+        echo "EMAIL_SENDER_NAME=${{ secrets.EMAIL_SENDER_NAME }}" >> app.env
+        echo "EMAIL_SENDER_ADDRESS=${{ secrets.EMAIL_SENDER_ADDRESS }}" >> app.env
+        echo "EMAIL_SENDER_PASSWORD=${{ secrets.EMAIL_SENDER_PASSWORD }}" >> app.env
+        echo "USERNAME=${{ secrets.EMAIL_SENDER_ADDRESS }}" >> app.env
+        echo "PASSWORD=${{ secrets.EMAIL_SENDER_PASSWORD }}" >> app.env
+        echo "FULL_NAME=Administrator" >> app.env
+        echo "EMAIL=${{ secrets.EMAIL_SENDER_ADDRESS }}" >> app.env
+
+    # 4. 配置 QEMU (必须项：用于支持后面的 arm64 跨架构构建)
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v3
+
+    # 5. 配置 Docker Buildx (支持多架构构建的插件)
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    # 6. 登录到 GHCR (如果是 PR 则跳过)
+    - name: Log into registry ${{ env.REGISTRY }}
+      if: github.event_name != 'pull_request'
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }} # GitHub 自动生成的短效 Token，非常安全
+
+    # 7. 构建并推送多架构镜像
+    # 使用 GitHub 提供的 ${{ github.sha }} 作为唯一 Tag，方便回滚
+    - name: Build, tag, and push docker image
+      env:
+        REGISTRY: ghcr.io/jingqi0327  # 你的 GHCR 地址
+        REPOSITORY: simple_bank       # 你的项目名称
+        IMAGE_TAG: ${{ github.sha }}
+      run: |
+        docker buildx build \
+          --platform linux/amd64,linux/arm64 \
+          -t $REGISTRY/$REPOSITORY:$IMAGE_TAG \
+          -t $REGISTRY/$REPOSITORY:latest \
+          --push .
+
+    # 8. 配置 Kubeconfig 认证信息
+    - name: Set up Kubeconfig
+      run: |
+        mkdir -p ~/.kube
+        # 对 GitHub Secrets 中的 base64 文本进行解码并写入配置文件
+        echo "${{ secrets.KUBE_CONFIG_DATA }}" | base64 -d > ~/.kube/config
+        # 限制文件权限，保障安全
+        chmod 600 ~/.kube/config
+
+    # 9. 部署到集群
+    # 注：这里的 yaml 存放在 eks 文件夹下。虽然现在用的是 k3s，但只要 yaml 语法是标准的 Kubernetes 资源，放在什么文件夹下不影响运行。
+    # --validate=false 用于跳过 schema 严格校验，防止网络不好导致超时
+    - name: Deploy to k8s
+      env:
+        IMAGE_TAG: ${{ github.sha }}
+      run: |
+        # 使用 sed 命令，把 yaml 里的 latest 临时替换成这次真实的 commit hash，确保部署的就是我们刚构建并推送的镜像
+        sed -i "s|ghcr.io/jingqi0327/eleclog:latest|ghcr.io/jingqi0327/eleclog:${IMAGE_TAG}|g" eks/deployment.yaml
+
+        kubectl apply -f k8s/deployment-api.yaml --validate=false 
+        kubectl apply -f k8s/deployment-worker.yaml --validate=false
+        kubectl apply -f k8s/service.yaml --validate=false
+        # kubectl apply -f eks/ingress.yaml --validate=false
+        # kubectl apply -f eks/issuer.yaml --validate=false
