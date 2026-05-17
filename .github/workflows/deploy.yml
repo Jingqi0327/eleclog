@@ -75,7 +75,7 @@ jobs:
     - name: Build, tag, and push docker image
       env:
         REGISTRY: ghcr.io/jingqi0327  # 你的 GHCR 地址
-        REPOSITORY: simple_bank       # 你的项目名称
+        REPOSITORY: eleclog       # 你的项目名称
         IMAGE_TAG: ${{ github.sha }}
       run: |
         docker buildx build \
@@ -101,7 +101,8 @@ jobs:
         IMAGE_TAG: ${{ github.sha }}
       run: |
         # 使用 sed 命令，把 yaml 里的 latest 临时替换成这次真实的 commit hash，确保部署的就是我们刚构建并推送的镜像
-        sed -i "s|ghcr.io/jingqi0327/eleclog:latest|ghcr.io/jingqi0327/eleclog:${IMAGE_TAG}|g" eks/deployment.yaml
+        sed -i "s|ghcr.io/jingqi0327/eleclog:latest|ghcr.io/jingqi0327/eleclog:${IMAGE_TAG}|g" k8s/deployment-api.yaml
+        sed -i "s|ghcr.io/jingqi0327/eleclog:latest|ghcr.io/jingqi0327/eleclog:${IMAGE_TAG}|g" k8s/deployment-worker.yaml
 
         kubectl apply -f k8s/deployment-api.yaml --validate=false 
         kubectl apply -f k8s/deployment-worker.yaml --validate=false
