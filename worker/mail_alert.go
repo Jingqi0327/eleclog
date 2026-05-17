@@ -40,6 +40,10 @@ func (alerter *Mail_Alerter) Start() error {
 	return nil
 }
 
+func (alerter *Mail_Alerter) Stop() context.Context {
+	return alerter.cron.Stop()
+}
+
 // RunNow 立即执行一次检查通知逻辑
 func (alerter *Mail_Alerter) RunNow() {
 	logger.Log.Info("Mail_Alerter 开始执行检查通知逻辑...")

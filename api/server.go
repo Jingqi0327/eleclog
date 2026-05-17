@@ -1,7 +1,9 @@
 package api
 
 import (
+	"context"
 	"fmt"
+	"net/http"
 
 	db "github.com/Jingqi0327/eleclog/db/sqlc"
 	token "github.com/Jingqi0327/eleclog/token"
@@ -14,6 +16,7 @@ type Server struct {
 	router     *gin.Engine
 	config     util.Config
 	tokenMaker token.Maker
+	srv        *http.Server
 }
 
 func NewServer(config util.Config, store db.Store) (*Server, error) {
@@ -87,7 +90,15 @@ func (server *Server) setupRouter() {
 
 // 启动服务器
 func (server *Server) Start(address string) error {
-	return server.router.Run(address)
+	server.srv = &http.Server{
+		Addr:    address,
+		Handler: server.router,
+	}
+	return server.srv.ListenAndServe()
+}
+
+func (server *Server) Shutdown(ctx context.Context) error {
+	return server.srv.Shutdown(ctx)
 }
 
 // 统一的错误响应格式

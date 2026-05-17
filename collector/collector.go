@@ -39,6 +39,10 @@ func (c *Collector) Start() error {
 	return nil
 }
 
+func (c *Collector) Stop() context.Context {
+	return c.cron.Stop()
+}
+
 // RunNow 立即执行一次抓取逻辑
 func (collector *Collector) RunNow() {
 	ctx := context.Background()
