@@ -4,10 +4,12 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"time"
 
 	db "github.com/Jingqi0327/eleclog/db/sqlc"
 	token "github.com/Jingqi0327/eleclog/token"
 	"github.com/Jingqi0327/eleclog/util"
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
 
@@ -42,19 +44,18 @@ func (server *Server) setupRouter() {
 	router := gin.New()
 
 	// 启用CORS支持
-	router.Use(func(c *gin.Context) {
-		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
-		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
-		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
-		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, PATCH, DELETE")
-
-		if c.Request.Method == "OPTIONS" {
-			c.AbortWithStatus(204)
-			return
-		}
-
-		c.Next()
-	})
+	router.Use(cors.New(cors.Config{
+		// 允许访问的域名列表（替换为你前端真实的生产域名）
+		AllowOrigins: []string{"http://localhost:3001"},
+		// 允许的请求方法
+		AllowMethods: []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		// 允许携带的自定义请求头
+		AllowHeaders: []string{"Origin", "Authorization", "Content-Type", "X-Requested-With"},
+		// 是否允许客户端浏览器携带 Cookie（如果用了 JWT 存放在 Header，一般不需要开启）
+		AllowCredentials: false,
+		// 预检请求（OPTIONS）的缓存时间。在 12 小时内，浏览器不需要再重复发送 OPTIONS 请求，大幅提升性能
+		MaxAge: 12 * time.Hour,
+	}))
 
 	router.Use(GinLogger(), GinRecovery(true))
 
