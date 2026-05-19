@@ -8,12 +8,13 @@ import (
 
 // Config存储应用程序的配置信息
 type Config struct {
-	Environment          string        `mapstructure:"ENVIRONMENT"`
-	RunMode              string        `mapstructure:"RUN_MODE"`
-	DBDriver             string        `mapstructure:"DB_DRIVER"`
-	DBSource             string        `mapstructure:"DB_SOURCE"`
-	MigrationURL         string        `mapstructure:"MIGRATION_URL"`
-	TestDBSource         string        `mapstructure:"TEST_DB_SOURCE"`
+	Environment  string `mapstructure:"ENVIRONMENT"`
+	RunMode      string `mapstructure:"RUN_MODE"`
+	DBDriver     string `mapstructure:"DB_DRIVER"`
+	DBSource     string `mapstructure:"DB_SOURCE"`
+	MigrationURL string `mapstructure:"MIGRATION_URL"`
+	TestDBSource string `mapstructure:"TEST_DB_SOURCE"`
+	RedisAddress string `mapstructure:"REDIS_ADDRESS"`
 	HTTPServerAddress    string        `mapstructure:"HTTP_SERVER_ADDRESS"`
 	TokenSymmetricKey    string        `mapstructure:"TOKEN_SYMMETRIC_KEY"`
 	AccessTokenDuration  time.Duration `mapstructure:"ACCESS_TOKEN_DURATION"`

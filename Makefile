@@ -57,5 +57,7 @@ image:
   	-t ghcr.io/jingqi0327/eleclog:latest \
   	--push .
 
+redis:
+	docker run  --name redis -p 6379:6379 -d redis:8-alpine3.23
 
-.PHONY: createdb dropdb createtestdb droptestdb migrateup migratedown migratetestup migratetestdown migrateup1 migratedown1 new_migration db_schema sqlc server test frontend mock image
+.PHONY: createdb dropdb createtestdb droptestdb migrateup migratedown migratetestup migratetestdown migrateup1 migratedown1 new_migration db_schema sqlc server test frontend mock image redis

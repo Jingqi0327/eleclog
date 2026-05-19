@@ -20,6 +20,7 @@ import (
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"github.com/hibiken/asynq"
 	_ "github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
@@ -49,41 +50,46 @@ func main() {
 	}
 	defer logger.Log.Sync()
 
-	logger.Log.Info(">> Starting server...")
-
-	ctx, stop := signal.NotifyContext(context.Background(), interruptSignals...)
-	defer stop()
+	logger.Log.Info("[System] Starting server...")
 
 	connPool, err := pgxpool.New(context.Background(), config.DBSource)
 	if err != nil {
-		logger.Log.Fatal("cannot connect to db:", zap.Error(err))
+		logger.Log.Fatal("[System] Cannot connect to db:", zap.Error(err))
 	}
 
 	store := db.NewStore(connPool)
 	runMigrate(config.MigrationURL, config.DBSource)
 	addDefaultUser(config, store)
 
+	redisOpt := asynq.RedisClientOpt{
+		Addr: config.RedisAddress,
+	}
+	taskDistributor := worker.NewRedisTaskDistributor(redisOpt)
+
+	ctx, stop := signal.NotifyContext(context.Background(), interruptSignals...)
+	defer stop()
 	waitGroup, ctx := errgroup.WithContext(ctx)
 
 	switch config.RunMode {
 	case "backend":
-		logger.Log.Info(">> Running in backend mode, skipping collector and mail alerter...")
+		logger.Log.Info("[System] Running in backend mode, skipping collector and mail alerter...")
 		runGinServer(waitGroup, ctx, config, store)
 	case "worker":
-		logger.Log.Info(">> Running in worker mode, skipping API server...")
+		logger.Log.Info("[System] Running in worker mode, skipping API server...")
 		go runCollector(waitGroup, ctx, config, store)
-		runMailAlerter(waitGroup, ctx, config, store)
-		select {} // 阻塞主线程，保持Worker运行
+		runTaskScheduler(waitGroup, ctx, redisOpt)
+		runTaskProcessor(waitGroup, ctx, config, redisOpt, store, taskDistributor)
 	default:
-		logger.Log.Info(">> Running in full mode, starting API server, collector and mail alerter...")
+		logger.Log.Info("[System] Running in full mode, starting API server, collector and mail alerter...")
 		go runCollector(waitGroup, ctx, config, store)
-		go runMailAlerter(waitGroup, ctx, config, store)
+		runTaskScheduler(waitGroup, ctx, redisOpt)
+		runTaskProcessor(waitGroup, ctx, config, redisOpt, store, taskDistributor)
 		runGinServer(waitGroup, ctx, config, store)
 	}
 
 	err = waitGroup.Wait()
 	if err != nil {
-		logger.Log.Fatal(">> Error from wait group: ", zap.Error(err))
+		logger.Log.Fatal("[System] Error from wait group: ", zap.Error(err))
 	}
 
 }
@@ -91,12 +97,12 @@ func main() {
 func runGinServer(waitGroup *errgroup.Group, ctx context.Context, config util.Config, store db.Store) {
 	server, err := api.NewServer(config, store)
 	if err != nil {
-		logger.Log.Fatal("cannot create server:", zap.Error(err))
+		logger.Log.Fatal("[Server] Cannot create server:", zap.Error(err))
 	}
 
 	waitGroup.Go(func() error {
-		logger.Log.Info(">> API server started successfully...")
-		msg := fmt.Sprintf(">> API Server is running on %s ...", config.HTTPServerAddress)
+		logger.Log.Info("[Server] API server started successfully...")
+		msg := fmt.Sprintf("[Server] API Server is running on %s ...", config.HTTPServerAddress)
 		logger.Log.Info(msg)
 
 		err := server.Start(config.HTTPServerAddress)
@@ -104,7 +110,7 @@ func runGinServer(waitGroup *errgroup.Group, ctx context.Context, config util.Co
 			if errors.Is(err, http.ErrServerClosed) {
 				return nil
 			}
-			logger.Log.Error("cannot start server:", zap.Error(err))
+			logger.Log.Error("[Server] Cannot start server:", zap.Error(err))
 			return err
 		}
 		return nil
@@ -113,13 +119,13 @@ func runGinServer(waitGroup *errgroup.Group, ctx context.Context, config util.Co
 	waitGroup.Go(func() error {
 		<-ctx.Done()
 
-		logger.Log.Info(">> Graceful shutdown API server...")
+		logger.Log.Info("[Server] Graceful shutdown API server...")
 		err := server.Shutdown(ctx)
 		if err != nil {
-			logger.Log.Error(">> Cannot shutdown API server:", zap.Error(err))
+			logger.Log.Error("[Server] Cannot shutdown API server:", zap.Error(err))
 			return err
 		}
-		logger.Log.Info(">> API server stopped successfully")
+		logger.Log.Info("[Server] API server stopped successfully")
 		return nil
 	})
 
@@ -130,52 +136,84 @@ func runCollector(waitGroup *errgroup.Group, ctx context.Context, config util.Co
 
 	err := collector.Start()
 	if err != nil {
-		logger.Log.Fatal("cannot start collector", zap.Error(err))
+		logger.Log.Fatal("[Collector] Cannot start collector", zap.Error(err))
 	}
-	logger.Log.Info(">> Collector started successfully...")
+	logger.Log.Info("[Collector] Collector started successfully...")
 
 	waitGroup.Go(func() error {
 		<-ctx.Done()
-		logger.Log.Info(">> Graceful shutdown collector...")
+		logger.Log.Info("[Collector] Graceful shutdown collector...")
 		c_ctx := collector.Stop()
 		timeoutCtx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 		defer cancel()
 
 		select {
 		case <-timeoutCtx.Done():
-			logger.Log.Warn(">> Collector cannot Gracefully shutdown, forced to abort:", zap.Error(timeoutCtx.Err()))
+			logger.Log.Warn("[Collector] Collector cannot Gracefully shutdown, forced to abort:", zap.Error(timeoutCtx.Err()))
 			return timeoutCtx.Err()
 		case <-c_ctx.Done():
-			logger.Log.Info(">> Collector stopped successfully")
+			logger.Log.Info("[Collector] Collector stopped successfully")
 		}
 		return nil
 	})
 }
 
-func runMailAlerter(waitGroup *errgroup.Group, ctx context.Context, config util.Config, store db.Store) {
-	mailer := mail.NewQQmailSender(config.EmailSenderName, config.EmailSenderAddress, config.EmailSenderPassword)
-	alerter := worker.NewMailAlerter(store, mailer)
-
-	err := alerter.Start()
+func runTaskScheduler(
+	waitGroup *errgroup.Group,
+	ctx context.Context,
+	redisOpt asynq.RedisClientOpt,
+) {
+	scheduler := worker.NewRedisTaskScheduler(redisOpt)
+	err := scheduler.ScheduleDetectLowBalance()
 	if err != nil {
-		logger.Log.Fatal("cannot start mail alerter", zap.Error(err))
+		logger.Log.Fatal("[Scheduler] Failed to register scheduler", zap.Error(err))
 	}
-	logger.Log.Info(">> Mail alerter started successfully...")
+
+	logger.Log.Info("[Scheduler] Starting task scheduler...")
+	err = scheduler.Start()
+	if err != nil {
+		logger.Log.Fatal("[Scheduler] Failed to start scheduler", zap.Error(err))
+	}
+	logger.Log.Info("[Scheduler] Task scheduler started successfully")
 
 	waitGroup.Go(func() error {
 		<-ctx.Done()
-		logger.Log.Info(">> Graceful shutdown mail alerter...")
-		m_ctx := alerter.Stop()
-		timeoutCtx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-		defer cancel()
+		logger.Log.Info("[Scheduler] Graceful shutdown scheduler...")
+		scheduler.Shutdown()
+		logger.Log.Info("[Scheduler] Scheduler stopped")
+		return nil
+	})
+}
 
-		select {
-		case <-timeoutCtx.Done():
-			logger.Log.Warn(">> Mail alerter cannot Gracefully shutdown, forced to abort:", zap.Error(timeoutCtx.Err()))
-			return timeoutCtx.Err()
-		case <-m_ctx.Done():
-			logger.Log.Info(">> Mail alerter stopped successfully")
-		}
+func runTaskProcessor(
+	waitGroup *errgroup.Group,
+	ctx context.Context,
+	config util.Config,
+	redisOpt asynq.RedisClientOpt,
+	store db.Store,
+	taskDistributor worker.TaskDistributor,
+) {
+	mailer := mail.NewQQmailSender(config.EmailSenderName, config.EmailSenderAddress, config.EmailSenderPassword)
+	redisTaskDistributor, ok := taskDistributor.(*worker.RedisTaskDistributor)
+	if !ok {
+		logger.Log.Fatal("[Processor] TaskDistributor is not a RedisTaskDistributor")
+		return
+	}
+	taskProcessor := worker.NewRedisTaskProcessor(redisOpt, store, mailer, redisTaskDistributor)
+
+	logger.Log.Info("[Processor] Starting task processor...")
+	err := taskProcessor.Start()
+	if err != nil {
+		logger.Log.Fatal("[Processor] Cannot start task processor", zap.Error(err))
+		return
+	}
+	logger.Log.Info("[Processor] Task processor started successfully")
+
+	waitGroup.Go(func() error {
+		<-ctx.Done()
+		logger.Log.Info("[Processor] Graceful shutdown task processor...")
+		taskProcessor.Shutdown()
+		logger.Log.Info("[Processor] Task processor stopped successfully")
 		return nil
 	})
 }
@@ -184,16 +222,16 @@ func addDefaultUser(config util.Config, store db.Store) {
 	// 假如数据库中没有用户，我们就添加一个默认用户
 	count, err := store.CountUsers(context.Background())
 	if err != nil {
-		logger.Log.Fatal("cannot count users", zap.Error(err))
+		logger.Log.Fatal("[System] Cannot count users", zap.Error(err))
 	}
 
 	hashPassword, err := util.HashPassword(config.Password)
 	if err != nil {
-		logger.Log.Fatal("cannot hash password", zap.Error(err))
+		logger.Log.Fatal("[System] Cannot hash password", zap.Error(err))
 	}
 
 	if count == 0 {
-		logger.Log.Info(">> trying to create a default user...")
+		logger.Log.Info("[System] Trying to create a default user...")
 		arg := db.CreateUserParams{
 			Username:       config.Username,
 			HashedPassword: hashPassword,
@@ -203,9 +241,9 @@ func addDefaultUser(config util.Config, store db.Store) {
 
 		_, err := store.CreateUser(context.Background(), arg)
 		if err != nil {
-			logger.Log.Fatal(">> cannot create default user", zap.Error(err))
+			logger.Log.Fatal("[System] Cannot create default user", zap.Error(err))
 		} else {
-			logger.Log.Info(">> default user created successfully",
+			logger.Log.Info("[System] Default user created successfully",
 				zap.String("username", config.Username),
 				zap.String("password", config.Password),
 				zap.String("email", config.Email),
@@ -220,14 +258,14 @@ func runMigrate(migrationURL string, dbSource string) {
 	// 1. 创建一个新的迁移实例
 	migration, err := migrate.New(migrationURL, dbSource)
 	if err != nil {
-		logger.Log.Fatal("cannot create new migration instance:", zap.Error(err))
+		logger.Log.Fatal("[System] Cannot create new migration instance:", zap.Error(err))
 	}
 
 	// 2. 执行迁移
 	err = migration.Up()
 	if err != nil && err != migrate.ErrNoChange {
-		logger.Log.Fatal("cannot run migration:", zap.Error(err))
+		logger.Log.Fatal("[System] Cannot run migration:", zap.Error(err))
 	}
 
-	logger.Log.Info(">> db migrated successfully")
+	logger.Log.Info("[System] DB migrated successfully")
 }
