@@ -34,11 +34,6 @@ func (distributor *RedisTaskDistributor) DistributeTaskSendNotificationEmail(ctx
 	// 将任务发送到 Redis 队列
 	info, err := distributor.client.EnqueueContext(ctx, task)
 	if err != nil {
-		logger.Log.Error("[Processor] Enqueue task failed",
-			zap.String("type", task.Type()),
-			zap.ByteString("payload", task.Payload()),
-			zap.Error(err),
-		)
 		return fmt.Errorf("fail to enqueue task: %w", err)
 	}
 	logger.Log.Info("[Processor] Enqueued task: 发送电量不足通知",
@@ -71,11 +66,6 @@ func (processor *RedisTaskProcessor) ProcessTaskSendNotificationEmail(ctx contex
 	to := []string{user.Email}
 	err = processor.emailSender.SendEmail(subject, content, to, nil, nil, nil)
 	if err != nil {
-		logger.Log.Error("[Processor] 发送邮件通知失败",
-			zap.String("username", payload.Username),
-			zap.Int64("room_id", payload.RoomID),
-			zap.Error(err),
-		)
 		return fmt.Errorf("fail to send email: %w", err)
 	}
 	logger.Log.Info("[Processor] Processed task",
@@ -91,11 +81,6 @@ func (processor *RedisTaskProcessor) ProcessTaskSendNotificationEmail(ctx contex
 	}
 	_, err = processor.store.UpdateUserRoomNotificationLastNotifiedAt(ctx, arg)
 	if err != nil {
-		logger.Log.Error("[Processor] Fail to update last notified at",
-			zap.String("username", payload.Username),
-			zap.Int64("room_id", payload.RoomID),
-			zap.Error(err),
-		)
 		return fmt.Errorf("fail to update last notified at: %w", err)
 	}
 

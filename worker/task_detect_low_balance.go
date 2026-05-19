@@ -17,12 +17,7 @@ func (distributor *RedisTaskDistributor) DistributeTaskDetectLowBalance(ctx cont
 	// 将任务发送到 Redis 队列
 	info, err := distributor.client.EnqueueContext(ctx, task)
 	if err != nil {
-		logger.Log.Error("[Scheduler] Enqueue task failed",
-			zap.String("type", task.Type()),
-			zap.ByteString("payload", task.Payload()),
-			zap.Error(err),
-		)
-		return fmt.Errorf("fail to enqueue task: %w", err)
+		return fmt.Errorf("Fail to enqueue task: %w", err)
 	}
 	logger.Log.Info("[Scheduler] Enqueued task",
 		zap.String("type", task.Type()),
@@ -51,10 +46,7 @@ func (processor *RedisTaskProcessor) ProcessTaskDetectLowBalance(ctx context.Con
 
 	notifications, err := processor.store.ListDueUserRoomNotifications(ctx)
 	if err != nil {
-		logger.Log.Error("[Processor] Find due notifications failed",
-			zap.Error(err),
-		)
-		return err
+		return fmt.Errorf("Fail to query due user room notifications: %w", err)
 	}
 
 	roomCurrentBalance := make(map[int64]int64) // 将房间当前的余额存入map，避免重复查询

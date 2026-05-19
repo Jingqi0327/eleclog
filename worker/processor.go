@@ -2,10 +2,13 @@ package worker
 
 import (
 	"context"
+	"errors"
 
 	db "github.com/Jingqi0327/eleclog/db/sqlc"
+	"github.com/Jingqi0327/eleclog/logger"
 	"github.com/Jingqi0327/eleclog/mail"
 	"github.com/hibiken/asynq"
+	"go.uber.org/zap"
 )
 
 type TaskProcessor interface {
@@ -32,6 +35,22 @@ func NewRedisTaskProcessor(
 	server := asynq.NewServer(
 		redisOpt,
 		asynq.Config{
+			ErrorHandler: asynq.ErrorHandlerFunc(func(ctx context.Context, task *asynq.Task, err error) {
+				// 对于明确放弃重试的任务，打 Warn 就行
+				if errors.Is(err, asynq.SkipRetry) {
+					logger.Log.Warn("[Asynq] Task skipped retry",
+						zap.Error(err),
+						zap.String("type", task.Type()),
+					)
+					return
+				}
+
+				// 对于普通会重试的错误，打 Error
+				logger.Log.Error("[Asynq] Failed to process task",
+					zap.Error(err),
+					zap.String("type", task.Type()),
+					zap.ByteString("payload", task.Payload()))
+			}),
 			Logger: NewAsynqLogger(),
 		},
 	)

@@ -50,7 +50,7 @@ func main() {
 	}
 	defer logger.Log.Sync()
 
-	logger.Log.Info("[System] Starting server...")
+	logger.Log.Info("[System] Starting processes...")
 
 	connPool, err := pgxpool.New(context.Background(), config.DBSource)
 	if err != nil {
@@ -91,7 +91,7 @@ func main() {
 	if err != nil {
 		logger.Log.Fatal("[System] Error from wait group: ", zap.Error(err))
 	}
-
+	logger.Log.Info("[System] All processes have stopped")
 }
 
 func runGinServer(waitGroup *errgroup.Group, ctx context.Context, config util.Config, store db.Store) {
