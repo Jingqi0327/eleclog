@@ -7,7 +7,7 @@ import (
 type TaskScheduler interface {
 	Start() error
 	Shutdown()
-	ScheduleDetectLowBalance() error
+	ScheduleDetectLowBalance(cron string) error
 }
 
 type RedisTaskScheduler struct {

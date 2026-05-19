@@ -28,6 +28,7 @@ type Config struct {
 	Password             string        `mapstructure:"PASSWORD"`
 	FullName             string        `mapstructure:"FULL_NAME"`
 	Email                string        `mapstructure:"EMAIL"`
+	DetectLowBalanceCron string        `mapstructure:"DETECT_LOW_BALANCE_CRON"`
 }
 
 // LoadConfig 从指定路径加载配置文件

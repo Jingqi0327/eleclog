@@ -77,12 +77,12 @@ func main() {
 	case "worker":
 		logger.Log.Info("[System] Running in worker mode, skipping API server...")
 		go runCollector(waitGroup, ctx, config, store)
-		runTaskScheduler(waitGroup, ctx, redisOpt)
+		runTaskScheduler(waitGroup, ctx, config, redisOpt)
 		runTaskProcessor(waitGroup, ctx, config, redisOpt, store, taskDistributor)
 	default:
 		logger.Log.Info("[System] Running in full mode, starting API server, collector and mail alerter...")
 		go runCollector(waitGroup, ctx, config, store)
-		runTaskScheduler(waitGroup, ctx, redisOpt)
+		runTaskScheduler(waitGroup, ctx, config, redisOpt)
 		runTaskProcessor(waitGroup, ctx, config, redisOpt, store, taskDistributor)
 		runGinServer(waitGroup, ctx, config, store)
 	}
@@ -161,10 +161,11 @@ func runCollector(waitGroup *errgroup.Group, ctx context.Context, config util.Co
 func runTaskScheduler(
 	waitGroup *errgroup.Group,
 	ctx context.Context,
+	config util.Config,
 	redisOpt asynq.RedisClientOpt,
 ) {
 	scheduler := worker.NewRedisTaskScheduler(redisOpt)
-	err := scheduler.ScheduleDetectLowBalance()
+	err := scheduler.ScheduleDetectLowBalance(config.DetectLowBalanceCron)
 	if err != nil {
 		logger.Log.Fatal("[Scheduler] Failed to register scheduler", zap.Error(err))
 	}

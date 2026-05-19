@@ -53,6 +53,7 @@ jobs:
         echo "PASSWORD=${{ secrets.EMAIL_SENDER_PASSWORD }}" >> app.env
         echo "FULL_NAME=Administrator" >> app.env
         echo "EMAIL=${{ secrets.EMAIL_SENDER_ADDRESS }}" >> app.env
+        echo 'DETECT_LOW_BALANCE_CRON="10 * * * *"' >> app.env
 
     # 4. 配置 QEMU (必须项：用于支持后面的 arm64 跨架构构建)
     - name: Set up QEMU

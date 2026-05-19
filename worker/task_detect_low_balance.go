@@ -33,14 +33,16 @@ func (distributor *RedisTaskDistributor) DistributeTaskDetectLowBalance(ctx cont
 	return nil
 }
 
-func (scheduler *RedisTaskScheduler) ScheduleDetectLowBalance() error {
+func (scheduler *RedisTaskScheduler) ScheduleDetectLowBalance(cron string) error {
 	task := asynq.NewTask(TaskDetectLowBalance, nil)
 	// 注册定时任务
-	_, err := scheduler.scheduler.Register("*/1 * * * *", task)
+	_, err := scheduler.scheduler.Register(cron, task)
 	if err != nil {
 		return err
 	}
-	logger.Log.Info("[Scheduler] Registered task: 检测低于余额阈值的房间")
+	logger.Log.Info("[Scheduler] Registered task: 检测低于余额阈值的房间",
+		zap.String("cron", cron),
+	)
 	return nil
 }
 
