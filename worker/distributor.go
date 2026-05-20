@@ -9,6 +9,8 @@ import (
 type TaskDistributor interface {
 	DistributeTaskSendNotificationEmail(ctx context.Context, payload *PayloadSendNotificationEmail, opts ...asynq.Option) error
 	DistributeTaskDetectLowBalance(ctx context.Context, opts ...asynq.Option) error
+	DistributeTaskSendFetchSurplusTasks(ctx context.Context, opts ...asynq.Option) error
+	DistributeTaskFetchSurplusAndStore(ctx context.Context, payload *PayloadFetchSurplusAndStore, opts ...asynq.Option) error
 }
 
 // RedisTaskDistributor 负责将任务分发到 Redis 队列

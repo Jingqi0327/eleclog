@@ -8,6 +8,7 @@ type TaskScheduler interface {
 	Start() error
 	Shutdown()
 	ScheduleDetectLowBalance(cron string) error
+	ScheduleTaskSendFetchSurplusTasks(cron string) error
 }
 
 type RedisTaskScheduler struct {

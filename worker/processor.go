@@ -7,6 +7,8 @@ import (
 	db "github.com/Jingqi0327/eleclog/db/sqlc"
 	"github.com/Jingqi0327/eleclog/logger"
 	"github.com/Jingqi0327/eleclog/mail"
+	"github.com/Jingqi0327/eleclog/util"
+	"github.com/go-resty/resty/v2"
 	"github.com/hibiken/asynq"
 	"go.uber.org/zap"
 )
@@ -16,6 +18,8 @@ type TaskProcessor interface {
 	Shutdown()
 	ProcessTaskSendNotificationEmail(ctx context.Context, task *asynq.Task) error
 	ProcessTaskDetectLowBalance(ctx context.Context, task *asynq.Task) error
+	ProcessTaskSendFetchSurplusTasks(ctx context.Context, task *asynq.Task) error
+	ProcessTaskFetchSurplusAndStore(ctx context.Context, task *asynq.Task) error
 }
 
 // RedisTaskProcessor 负责从 Redis 队列中取出任务并执行
@@ -24,6 +28,8 @@ type RedisTaskProcessor struct {
 	store       db.Store      // 数据库存储接口，提供访问数据库的方法
 	emailSender mail.EmailSender
 	distributor *RedisTaskDistributor
+	config      util.Config
+	client      *resty.Client
 }
 
 func NewRedisTaskProcessor(
@@ -31,6 +37,7 @@ func NewRedisTaskProcessor(
 	store db.Store,
 	emailSender mail.EmailSender,
 	taskDistributor *RedisTaskDistributor,
+	config util.Config,
 ) TaskProcessor {
 	server := asynq.NewServer(
 		redisOpt,
@@ -60,6 +67,8 @@ func NewRedisTaskProcessor(
 		store:       store,
 		emailSender: emailSender,
 		distributor: taskDistributor,
+		config:      config,
+		client:      resty.New(),
 	}
 }
 
@@ -67,6 +76,8 @@ func (processor *RedisTaskProcessor) Start() error {
 	mux := asynq.NewServeMux()                                                            // 创建一个新的 ServeMux，用于注册任务处理函数
 	mux.HandleFunc(TaskDetectLowBalance, processor.ProcessTaskDetectLowBalance)           // 注册处理 TaskDetectLowBalance 任务的函数
 	mux.HandleFunc(TaskSendNotificationEmail, processor.ProcessTaskSendNotificationEmail) // 注册处理 SendVerifyEmail 任务的函数
+	mux.HandleFunc(TaskSendFetchSurplusTasks, processor.ProcessTaskSendFetchSurplusTasks)
+	mux.HandleFunc(TaskFetchSurplusAndStore, processor.ProcessTaskFetchSurplusAndStore)
 
 	return processor.server.Start(mux)
 }

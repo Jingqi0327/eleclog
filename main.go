@@ -8,10 +8,8 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/Jingqi0327/eleclog/api"
-	"github.com/Jingqi0327/eleclog/collector"
 	db "github.com/Jingqi0327/eleclog/db/sqlc"
 	"github.com/Jingqi0327/eleclog/logger"
 	"github.com/Jingqi0327/eleclog/mail"
@@ -76,12 +74,10 @@ func main() {
 		runGinServer(waitGroup, ctx, config, store)
 	case "worker":
 		logger.Log.Info("[System] Running in worker mode, skipping API server...")
-		go runCollector(waitGroup, ctx, config, store)
 		runTaskScheduler(waitGroup, ctx, config, redisOpt)
 		runTaskProcessor(waitGroup, ctx, config, redisOpt, store, taskDistributor)
 	default:
-		logger.Log.Info("[System] Running in full mode, starting API server, collector and mail alerter...")
-		go runCollector(waitGroup, ctx, config, store)
+		logger.Log.Info("[System] Running in full mode, starting API server, mail alerter...")
 		runTaskScheduler(waitGroup, ctx, config, redisOpt)
 		runTaskProcessor(waitGroup, ctx, config, redisOpt, store, taskDistributor)
 		runGinServer(waitGroup, ctx, config, store)
@@ -131,33 +127,6 @@ func runGinServer(waitGroup *errgroup.Group, ctx context.Context, config util.Co
 
 }
 
-func runCollector(waitGroup *errgroup.Group, ctx context.Context, config util.Config, store db.Store) {
-	collector := collector.NewCollector(config, store)
-
-	err := collector.Start()
-	if err != nil {
-		logger.Log.Fatal("[Collector] Cannot start collector", zap.Error(err))
-	}
-	logger.Log.Info("[Collector] Collector started successfully...")
-
-	waitGroup.Go(func() error {
-		<-ctx.Done()
-		logger.Log.Info("[Collector] Graceful shutdown collector...")
-		c_ctx := collector.Stop()
-		timeoutCtx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-		defer cancel()
-
-		select {
-		case <-timeoutCtx.Done():
-			logger.Log.Warn("[Collector] Collector cannot Gracefully shutdown, forced to abort:", zap.Error(timeoutCtx.Err()))
-			return timeoutCtx.Err()
-		case <-c_ctx.Done():
-			logger.Log.Info("[Collector] Collector stopped successfully")
-		}
-		return nil
-	})
-}
-
 func runTaskScheduler(
 	waitGroup *errgroup.Group,
 	ctx context.Context,
@@ -168,6 +137,11 @@ func runTaskScheduler(
 	err := scheduler.ScheduleDetectLowBalance(config.DetectLowBalanceCron)
 	if err != nil {
 		logger.Log.Fatal("[Scheduler] Failed to register scheduler", zap.Error(err))
+	}
+
+	err = scheduler.ScheduleTaskSendFetchSurplusTasks(config.FetchSurplusCron)
+	if err != nil {
+		logger.Log.Fatal("[Scheduler] Failed to register fetch surplus scheduler", zap.Error(err))
 	}
 
 	logger.Log.Info("[Scheduler] Starting task scheduler...")
@@ -200,7 +174,7 @@ func runTaskProcessor(
 		logger.Log.Fatal("[Processor] TaskDistributor is not a RedisTaskDistributor")
 		return
 	}
-	taskProcessor := worker.NewRedisTaskProcessor(redisOpt, store, mailer, redisTaskDistributor)
+	taskProcessor := worker.NewRedisTaskProcessor(redisOpt, store, mailer, redisTaskDistributor, config)
 
 	logger.Log.Info("[Processor] Starting task processor...")
 	err := taskProcessor.Start()
