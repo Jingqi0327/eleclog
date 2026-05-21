@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	db "github.com/Jingqi0327/eleclog/db/sqlc"
 	"github.com/Jingqi0327/eleclog/logger"
 	"github.com/hibiken/asynq"
 	"go.uber.org/zap"
@@ -66,19 +67,31 @@ func (processor *RedisTaskProcessor) ProcessTaskDetectLowBalance(ctx context.Con
 		curSurplus := roomCurrentBalance[notification.RoomID]
 
 		if curSurplus < int64(notification.Threshold*100) {
-			sendEmailPayload := &PayloadSendNotificationEmail{
-				Username:  notification.Username,
-				RoomID:    notification.RoomID,
-				Surplus:   curSurplus,
-				Threshold: int64(notification.Threshold),
+
+			arg := db.UpdateUserRoomNotificationLastNotifiedAtParams{
+				Username: notification.Username,
+				RoomID:   notification.RoomID,
 			}
-			err := processor.distributor.DistributeTaskSendNotificationEmail(ctx, sendEmailPayload)
-			if err != nil {
-				logger.Log.Error("[Processor] Fail to enqueue send email task",
-					zap.Error(err),
-				)
-				continue
-			}
+
+			_, err = processor.store.UpdateRoomNotificationLastNotifiedAtTx(ctx, db.UpdateUserRoomNotificationLastNotifiedAtTxParams{
+				UpdateUserRoomNotificationLastNotifiedAtParams: arg,
+				AfterUpdate: func(n db.UserRoomNotification) error {
+					sendEmailPayload := &PayloadSendNotificationEmail{
+						Username:  n.Username,
+						RoomID:    n.RoomID,
+						Surplus:   curSurplus,
+						Threshold: int64(n.Threshold),
+					}
+					err := processor.distributor.DistributeTaskSendNotificationEmail(ctx, sendEmailPayload)
+					if err != nil {
+						logger.Log.Error("[Processor] Fail to enqueue send email task",
+							zap.Error(err),
+						)
+					}
+					return err
+				},
+			})
+
 		}
 	}
 

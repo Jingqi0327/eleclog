@@ -83,3 +83,24 @@ func TestGetRecordsByHourRange(t *testing.T) {
 		require.WithinDuration(t, baseTime.Add(time.Duration(i+2)*time.Hour), record.RecordedAt, time.Minute)
 	}
 }
+
+func TestGetRecordedAtsByRange(t *testing.T) {
+	room := createRandomRoom(t)
+	baseTime := util.RandomTime()
+	for i := 0; i < 10; i++ {
+		createRandomElectricityRecordwithTime(t, room, baseTime.Add(time.Duration(i)*time.Hour))
+	}
+
+	arg := GetRecordedAtsByRangeParams{
+		RoomID:    room.ID,
+		StartTime: baseTime.Add(2 * time.Hour),
+		EndTime:   baseTime.Add(5 * time.Hour),
+	}
+	
+	recordedAts, err := testStore.GetRecordedAtsByRange(context.Background(), arg)
+	require.NoError(t, err)
+	require.Len(t, recordedAts, 4)
+	for i, recordedAt := range recordedAts {
+		require.WithinDuration(t, baseTime.Add(time.Duration(i+2)*time.Hour), recordedAt, time.Minute)
+	}
+}

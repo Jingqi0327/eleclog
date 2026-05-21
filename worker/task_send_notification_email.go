@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"time"
 
 	db "github.com/Jingqi0327/eleclog/db/sqlc"
 	"github.com/Jingqi0327/eleclog/logger"
@@ -60,7 +59,6 @@ func (processor *RedisTaskProcessor) ProcessTaskSendNotificationEmail(ctx contex
 		return fmt.Errorf("fail to get user: %w", err)
 	}
 
-	//TODO: 发送邮件和更新数据库在一个事务里完成
 	subject := "寝室电量不足通知"
 	content := "您好，您的寝室电量剩余 " + util.FormatCentsToYuan(payload.Surplus) + " 元，已低于您设置的阈值 " + util.FormatCentsToYuan(payload.Threshold*100) + " 元，请及时充值。"
 	to := []string{user.Email}
@@ -73,16 +71,6 @@ func (processor *RedisTaskProcessor) ProcessTaskSendNotificationEmail(ctx contex
 		zap.ByteString("payload", task.Payload()),
 		zap.String("email", user.Email),
 	)
-
-	arg := db.UpdateUserRoomNotificationLastNotifiedAtParams{
-		Username:       payload.Username,
-		RoomID:         payload.RoomID,
-		LastNotifiedAt: time.Now(),
-	}
-	_, err = processor.store.UpdateUserRoomNotificationLastNotifiedAt(ctx, arg)
-	if err != nil {
-		return fmt.Errorf("fail to update last notified at: %w", err)
-	}
-
+	
 	return nil
 }

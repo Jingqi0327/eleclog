@@ -50,7 +50,8 @@ test:
 	go test -v -cover -short ./...
 
 mock:
-	mockgen -destination db/mock/store.go -package mockdb github.com/Jingqi0327/eleclog/db/sqlc Store 
+	mockgen -destination db/mock/store.go -package mockdb github.com/Jingqi0327/eleclog/db/sqlc Store
+	mockgen -destination worker/mock/distributor.go -package mockdb github.com/Jingqi0327/eleclog/worker TaskDistributor
 
 image:
 	docker buildx build --platform linux/amd64,linux/arm64 \
