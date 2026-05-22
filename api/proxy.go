@@ -3,6 +3,7 @@ package api
 import (
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-resty/resty/v2"
@@ -19,7 +20,16 @@ func (server *Server) newRestyClient() *resty.Client {
 // proxyQueryArea GET /proxy/areas
 // 获取校区列表（参数固定，无需前端传入）
 func (server *Server) proxyQueryArea(ctx *gin.Context) {
+	cacheKey := "proxy:areas"
 	var result interface{}
+
+	if server.cache != nil {
+		if err := server.cache.Get(ctx, cacheKey, &result); err == nil {
+			ctx.JSON(http.StatusOK, result)
+			return
+		}
+	}
+
 	resp, err := server.newRestyClient().R().
 		SetQueryParams(map[string]string{
 			"platform": "YUNMA_APP",
@@ -32,6 +42,11 @@ func (server *Server) proxyQueryArea(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadGateway, gin.H{"error": "上游请求失败"})
 		return
 	}
+
+	if server.cache != nil {
+		_ = server.cache.Set(ctx, cacheKey, result, 24*time.Hour)
+	}
+
 	ctx.JSON(http.StatusOK, result)
 }
 
@@ -43,7 +58,16 @@ func (server *Server) proxyQueryBuilding(ctx *gin.Context) {
 		return
 	}
 
+	cacheKey := fmt.Sprintf("proxy:buildings:%s", areaId)
 	var result interface{}
+
+	if server.cache != nil {
+		if err := server.cache.Get(ctx, cacheKey, &result); err == nil {
+			ctx.JSON(http.StatusOK, result)
+			return
+		}
+	}
+
 	resp, err := server.newRestyClient().R().
 		SetQueryParams(map[string]string{
 			"platform": "YUNMA_APP",
@@ -56,6 +80,11 @@ func (server *Server) proxyQueryBuilding(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadGateway, gin.H{"error": "上游请求失败"})
 		return
 	}
+
+	if server.cache != nil {
+		_ = server.cache.Set(ctx, cacheKey, result, 24*time.Hour)
+	}
+
 	ctx.JSON(http.StatusOK, result)
 }
 
@@ -68,7 +97,16 @@ func (server *Server) proxyQueryFloor(ctx *gin.Context) {
 		return
 	}
 
+	cacheKey := fmt.Sprintf("proxy:floors:%s:%s", areaId, buildingCode)
 	var result interface{}
+
+	if server.cache != nil {
+		if err := server.cache.Get(ctx, cacheKey, &result); err == nil {
+			ctx.JSON(http.StatusOK, result)
+			return
+		}
+	}
+
 	resp, err := server.newRestyClient().R().
 		SetQueryParams(map[string]string{
 			"platform":     "YUNMA_APP",
@@ -82,6 +120,11 @@ func (server *Server) proxyQueryFloor(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadGateway, gin.H{"error": "上游请求失败"})
 		return
 	}
+
+	if server.cache != nil {
+		_ = server.cache.Set(ctx, cacheKey, result, 24*time.Hour)
+	}
+
 	ctx.JSON(http.StatusOK, result)
 }
 
@@ -95,7 +138,16 @@ func (server *Server) proxyQueryRoom(ctx *gin.Context) {
 		return
 	}
 
+	cacheKey := fmt.Sprintf("proxy:rooms:%s:%s:%s", areaId, buildingCode, floorCode)
 	var result interface{}
+
+	if server.cache != nil {
+		if err := server.cache.Get(ctx, cacheKey, &result); err == nil {
+			ctx.JSON(http.StatusOK, result)
+			return
+		}
+	}
+
 	resp, err := server.newRestyClient().R().
 		SetQueryParams(map[string]string{
 			"platform":     "YUNMA_APP",
@@ -110,6 +162,11 @@ func (server *Server) proxyQueryRoom(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadGateway, gin.H{"error": "上游请求失败"})
 		return
 	}
+
+	if server.cache != nil {
+		_ = server.cache.Set(ctx, cacheKey, result, 24*time.Hour)
+	}
+
 	ctx.JSON(http.StatusOK, result)
 }
 

@@ -10,6 +10,7 @@ import (
 	"syscall"
 
 	"github.com/Jingqi0327/eleclog/api"
+	"github.com/Jingqi0327/eleclog/cache"
 	db "github.com/Jingqi0327/eleclog/db/sqlc"
 	"github.com/Jingqi0327/eleclog/logger"
 	"github.com/Jingqi0327/eleclog/mail"
@@ -21,6 +22,7 @@ import (
 	"github.com/hibiken/asynq"
 	_ "github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 )
@@ -64,6 +66,11 @@ func main() {
 	}
 	taskDistributor := worker.NewRedisTaskDistributor(redisOpt)
 
+	redisClient := redis.NewClient(&redis.Options{
+		Addr: config.RedisAddress,
+	})
+	redisCache := cache.NewRedisCache(redisClient)
+
 	ctx, stop := signal.NotifyContext(context.Background(), interruptSignals...)
 	defer stop()
 	waitGroup, ctx := errgroup.WithContext(ctx)
@@ -71,7 +78,7 @@ func main() {
 	switch config.RunMode {
 	case "backend":
 		logger.Log.Info("[System] Running in backend mode, skipping collector and mail alerter...")
-		runGinServer(waitGroup, ctx, config, store)
+		runGinServer(waitGroup, ctx, config, store, redisCache)
 	case "worker":
 		logger.Log.Info("[System] Running in worker mode, skipping API server...")
 		runTaskScheduler(waitGroup, ctx, config, redisOpt)
@@ -80,7 +87,7 @@ func main() {
 		logger.Log.Info("[System] Running in full mode, starting API server, mail alerter...")
 		runTaskScheduler(waitGroup, ctx, config, redisOpt)
 		runTaskProcessor(waitGroup, ctx, config, redisOpt, store, taskDistributor)
-		runGinServer(waitGroup, ctx, config, store)
+		runGinServer(waitGroup, ctx, config, store, redisCache)
 	}
 
 	err = waitGroup.Wait()
@@ -90,8 +97,8 @@ func main() {
 	logger.Log.Info("[System] All processes have stopped")
 }
 
-func runGinServer(waitGroup *errgroup.Group, ctx context.Context, config util.Config, store db.Store) {
-	server, err := api.NewServer(config, store)
+func runGinServer(waitGroup *errgroup.Group, ctx context.Context, config util.Config, store db.Store, redisCache cache.Cache) {
+	server, err := api.NewServer(config, store, redisCache)
 	if err != nil {
 		logger.Log.Fatal("[Server] Cannot create server:", zap.Error(err))
 	}

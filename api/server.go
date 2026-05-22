@@ -9,19 +9,21 @@ import (
 	db "github.com/Jingqi0327/eleclog/db/sqlc"
 	token "github.com/Jingqi0327/eleclog/token"
 	"github.com/Jingqi0327/eleclog/util"
+	"github.com/Jingqi0327/eleclog/cache"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
 
 type Server struct {
 	store      db.Store
+	cache      cache.Cache
 	router     *gin.Engine
 	config     util.Config
 	tokenMaker token.Maker
 	srv        *http.Server
 }
 
-func NewServer(config util.Config, store db.Store) (*Server, error) {
+func NewServer(config util.Config, store db.Store, c cache.Cache) (*Server, error) {
 	gin.SetMode(gin.ReleaseMode)
 	tokenMaker, err := token.NewPasetoMaker(config.TokenSymmetricKey)
 	if err != nil {
@@ -30,6 +32,7 @@ func NewServer(config util.Config, store db.Store) (*Server, error) {
 
 	server := &Server{
 		store:      store,
+		cache:      c,
 		config:     config,
 		tokenMaker: tokenMaker,
 	}
