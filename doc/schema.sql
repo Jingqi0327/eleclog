@@ -1,6 +1,6 @@
 -- SQL dump generated using DBML (dbml.dbdiagram.io)
 -- Database: PostgreSQL
--- Generated at: 2026-03-21T08:38:51.294Z
+-- Generated at: 2026-05-22T07:19:40.550Z
 
 CREATE TABLE "rooms" (
   "id" BIGSERIAL PRIMARY KEY,
@@ -24,6 +24,7 @@ CREATE TABLE "users" (
   "hashed_password" varchar NOT NULL,
   "full_name" varchar NOT NULL,
   "email" varchar UNIQUE NOT NULL,
+  "role" varchar NOT NULL DEFAULT (user),
   "created_at" timestamptz NOT NULL DEFAULT (now())
 );
 

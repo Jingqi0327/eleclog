@@ -36,6 +36,7 @@ Table users as U {
   hashed_password varchar [not null]
   full_name varchar [not null]
   email varchar [unique, not null]
+  role varchar  [default:`user`,not null]
   created_at timestamptz [not null, default: `now()`]
 }
 
