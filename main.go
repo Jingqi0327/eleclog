@@ -59,7 +59,7 @@ func main() {
 
 	store := db.NewStore(connPool)
 	runMigrate(config.MigrationURL, config.DBSource)
-	addDefaultUser(config, store)
+	initDefaultUser(config, store)
 
 	redisOpt := asynq.RedisClientOpt{
 		Addr: config.RedisAddress,
@@ -200,7 +200,7 @@ func runTaskProcessor(
 	})
 }
 
-func addDefaultUser(config util.Config, store db.Store) {
+func initDefaultUser(config util.Config, store db.Store) {
 	// 假如数据库中没有用户，我们就添加一个默认用户
 	count, err := store.CountUsers(context.Background())
 	if err != nil {
@@ -219,6 +219,7 @@ func addDefaultUser(config util.Config, store db.Store) {
 			HashedPassword: hashPassword,
 			FullName:       config.FullName,
 			Email:          config.Email,
+			Role:           util.AdminRole,
 		}
 
 		_, err := store.CreateUser(context.Background(), arg)

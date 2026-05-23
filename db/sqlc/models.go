@@ -33,6 +33,7 @@ type User struct {
 	FullName       string    `json:"full_name"`
 	Email          string    `json:"email"`
 	CreatedAt      time.Time `json:"created_at"`
+	Role           string    `json:"role"`
 }
 
 type UserRoomNotification struct {

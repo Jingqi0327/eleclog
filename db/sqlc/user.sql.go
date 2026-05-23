@@ -25,17 +25,18 @@ func (q *Queries) CountUsers(ctx context.Context) (int64, error) {
 
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (
-  username, hashed_password, full_name, email
+  username, hashed_password, full_name, role, email
 ) VALUES (
-  $1, $2, $3, $4
+  $1, $2, $3, $4,$5
 )
-RETURNING username, hashed_password, full_name, email, created_at
+RETURNING username, hashed_password, full_name, email, created_at, role
 `
 
 type CreateUserParams struct {
 	Username       string `json:"username"`
 	HashedPassword string `json:"hashed_password"`
 	FullName       string `json:"full_name"`
+	Role           string `json:"role"`
 	Email          string `json:"email"`
 }
 
@@ -45,6 +46,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		arg.Username,
 		arg.HashedPassword,
 		arg.FullName,
+		arg.Role,
 		arg.Email,
 	)
 	var i User
@@ -54,12 +56,13 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.FullName,
 		&i.Email,
 		&i.CreatedAt,
+		&i.Role,
 	)
 	return i, err
 }
 
 const getUser = `-- name: GetUser :one
-SELECT username, hashed_password, full_name, email, created_at FROM users
+SELECT username, hashed_password, full_name, email, created_at, role FROM users
 WHERE username = $1 
 LIMIT 1
 `
@@ -74,6 +77,7 @@ func (q *Queries) GetUser(ctx context.Context, username string) (User, error) {
 		&i.FullName,
 		&i.Email,
 		&i.CreatedAt,
+		&i.Role,
 	)
 	return i, err
 }
@@ -83,16 +87,18 @@ UPDATE users
 SET 
   hashed_password = coalesce($2, hashed_password),
   full_name = coalesce($3, full_name),
-  email = coalesce($4, email)
+  role = coalesce($4, role),
+  email = coalesce($5, email)
 WHERE 
   username = $1
-RETURNING username, hashed_password, full_name, email, created_at
+RETURNING username, hashed_password, full_name, email, created_at, role
 `
 
 type UpdateUserParams struct {
 	Username       string      `json:"username"`
 	HashedPassword pgtype.Text `json:"hashed_password"`
 	FullName       pgtype.Text `json:"full_name"`
+	Role           pgtype.Text `json:"role"`
 	Email          pgtype.Text `json:"email"`
 }
 
@@ -102,6 +108,7 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 		arg.Username,
 		arg.HashedPassword,
 		arg.FullName,
+		arg.Role,
 		arg.Email,
 	)
 	var i User
@@ -111,6 +118,7 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 		&i.FullName,
 		&i.Email,
 		&i.CreatedAt,
+		&i.Role,
 	)
 	return i, err
 }

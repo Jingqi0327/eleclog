@@ -1,9 +1,9 @@
 --创建用户
 -- name: CreateUser :one
 INSERT INTO users (
-  username, hashed_password, full_name, email
+  username, hashed_password, full_name, role, email
 ) VALUES (
-  $1, $2, $3, $4
+  $1, $2, $3, $4,$5
 )
 RETURNING *;
 
@@ -20,6 +20,7 @@ UPDATE users
 SET 
   hashed_password = coalesce(sqlc.narg(hashed_password), hashed_password),
   full_name = coalesce(sqlc.narg(full_name), full_name),
+  role = coalesce(sqlc.narg(role), role),
   email = coalesce(sqlc.narg(email), email)
 WHERE 
   username = $1
