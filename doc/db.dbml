@@ -15,6 +15,10 @@ Table rooms as R {
   created_at timestamptz [not null, default: `now()`]
 
   Note: '存储需要监控的寝室配置信息'
+
+  indexes {
+    (area_id, building_code, floor_code, room_code) [unique] // 联合唯一索引：防止重复添加同一房间
+  }
 }
 
 Table electricity_records {

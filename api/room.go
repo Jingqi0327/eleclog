@@ -44,7 +44,11 @@ func (server *Server) createRoom(ctx *gin.Context) {
 	}
 
 	room, err := server.store.CreateRoom(ctx, arg)
-	if err != nil {
+	if err != nil { 
+		if db.ErrorCode(err) == db.UniqueViolation {
+			ctx.JSON(http.StatusBadRequest, errorResponse(errors.New("room already exists")))
+			return
+		}
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}

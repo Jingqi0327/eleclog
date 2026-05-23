@@ -54,6 +54,51 @@ func TestCreateRoomAPI(t *testing.T) {
 				checkRoomResponse(t, recorder.Body, room)
 			},
 		},
+		{
+			name:"DuplicateRoom",
+			body: gin.H{
+				"name": room.Name,
+				"area_id": room.AreaID,
+				"building_code": room.BuildingCode,
+				"floor_code": room.FloorCode,
+				"room_code": room.RoomCode,
+			},
+			addAuthorization: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, "user", util.ManagerRole, time.Minute)
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().
+					CreateRoom(gomock.Any(), gomock.Any()).
+					Times(1).
+					Return(db.Room{}, db.ErrUniqueViolation)
+			},
+			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusBadRequest, recorder.Code)
+			},
+		},
+		{
+			name:"InternalError",
+			body: gin.H{
+				"name": room.Name,
+				"area_id": room.AreaID,
+				"building_code": room.BuildingCode,
+				"floor_code": room.FloorCode,
+				"room_code": room.RoomCode,
+			},
+			addAuthorization: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, "user", util.ManagerRole, time.Minute)
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().
+					CreateRoom(gomock.Any(), gomock.Any()).
+					Times(1).
+					Return(db.Room{}, sql.ErrConnDone)
+			},
+			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusInternalServerError, recorder.Code)
+			},
+		},
+		
 	}
 
 	for i := range testCases {

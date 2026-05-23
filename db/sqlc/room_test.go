@@ -36,7 +36,19 @@ func createRandomRoom(t *testing.T) Room {
 }
 
 func TestCreateRoom(t *testing.T) {
-	createRandomRoom(t)
+	room := createRandomRoom(t)
+
+	// 尝试创建完全相同的房间，应该会报错
+	arg := CreateRoomParams{
+		Name:         room.Name,
+		AreaID:       room.AreaID,
+		BuildingCode: room.BuildingCode,
+		FloorCode:    room.FloorCode,
+		RoomCode:     room.RoomCode,
+	}
+	_, err := testStore.CreateRoom(context.Background(), arg)
+	require.Error(t, err)
+	require.Equal(t, ErrorCode(err), UniqueViolation)
 }
 
 func TestGetRoom(t *testing.T) {
