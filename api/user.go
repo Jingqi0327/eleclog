@@ -17,6 +17,7 @@ type createUserRequest struct {
 	Username string `json:"username" binding:"required,alphanum"` //alphanum表示用户名只能包含字母和数字
 	Password string `json:"password" binding:"required,min=6"`    //min=6表示密码至少要有6个字符
 	FullName string `json:"full_name" binding:"required"`
+	Role     string `json:"role" binding:"omitempty"`       //TODO :自定义参数验证器
 	Email    string `json:"email" binding:"required,email"` //email表示邮箱格式必须正确
 }
 
@@ -25,6 +26,7 @@ type UserResponse struct {
 	Username          string    `json:"username"`
 	FullName          string    `json:"full_name"`
 	Email             string    `json:"email"`
+	Role              string    `json:"role"`
 	PasswordChangedAt time.Time `json:"password_changed_at"`
 	CreatedAt         time.Time `json:"created_at"`
 }
@@ -35,6 +37,7 @@ func newUserResponse(user db.User) UserResponse {
 		Username:  user.Username,
 		FullName:  user.FullName,
 		Email:     user.Email,
+		Role:      user.Role,
 		CreatedAt: user.CreatedAt,
 	}
 }
@@ -43,6 +46,14 @@ func (server *Server) createUser(ctx *gin.Context) {
 	var req createUserRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	payload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
+	currentUserRole := payload.Role
+	requestedRole := req.Role 
+	if currentUserRole == util.ManagerRole && requestedRole != util.UserRole {
+		ctx.JSON(http.StatusForbidden, errorResponse(errors.New("managers can only create users")))
 		return
 	}
 
@@ -62,7 +73,7 @@ func (server *Server) createUser(ctx *gin.Context) {
 	user, err := server.store.CreateUser(ctx, arg)
 
 	if err != nil {
-		if db.ErrorCode(err) == "23505" {
+		if db.ErrorCode(err) == db.UniqueViolation {
 			ctx.JSON(http.StatusForbidden, errorResponse(err))
 			return
 		}
@@ -116,6 +127,7 @@ func (server *Server) loginUser(ctx *gin.Context) {
 	// 4. 生成访问令牌，返回给客户端
 	accessToken, accessPayload, err := server.tokenMaker.CreateToken(
 		user.Username,
+		user.Role,
 		server.config.AccessTokenDuration,
 	)
 	if err != nil {

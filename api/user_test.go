@@ -37,9 +37,10 @@ func TestCreateUserAPI(t *testing.T) {
 				"password":  password,
 				"full_name": user.FullName,
 				"email":     user.Email,
+				"role":      util.ManagerRole,
 			},
 			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
-				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, "admin", time.Minute)
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, "admin", util.AdminRole, time.Minute)
 			},
 			buildStubs: func(store *mockdb.MockStore) {
 				arg := db.CreateUserParams{
@@ -65,6 +66,7 @@ func TestCreateUserAPI(t *testing.T) {
 				"password":  password,
 				"full_name": user.FullName,
 				"email":     user.Email,
+				"role":      util.ManagerRole,
 			},
 			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
 				// 不添加认证信息
@@ -85,9 +87,10 @@ func TestCreateUserAPI(t *testing.T) {
 				"password":  password,
 				"full_name": user.FullName,
 				"email":     user.Email,
+				"role":      util.ManagerRole,
 			},
 			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
-				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, "admin", time.Minute)
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, "admin", util.AdminRole, time.Minute)
 			},
 			buildStubs: func(store *mockdb.MockStore) {
 				store.EXPECT().
@@ -106,9 +109,10 @@ func TestCreateUserAPI(t *testing.T) {
 				"password":  password,
 				"full_name": user.FullName,
 				"email":     user.Email,
+				"role":      util.ManagerRole,
 			},
 			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
-				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, "admin", time.Minute)
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, "admin", util.AdminRole, time.Minute)
 			},
 			buildStubs: func(store *mockdb.MockStore) {
 				store.EXPECT().
@@ -127,9 +131,10 @@ func TestCreateUserAPI(t *testing.T) {
 				"password":  password,
 				"full_name": user.FullName,
 				"email":     user.Email,
+				"role":      util.ManagerRole,
 			},
 			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
-				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, "admin", time.Minute)
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, "admin",util.AdminRole, time.Minute)
 			},
 			buildStubs: func(store *mockdb.MockStore) {
 				store.EXPECT().
@@ -147,9 +152,10 @@ func TestCreateUserAPI(t *testing.T) {
 				"password":  password,
 				"full_name": user.FullName,
 				"email":     "invalid-email",
+				"role":      util.ManagerRole,
 			},
 			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
-				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, "admin", time.Minute)
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, "admin", util.AdminRole,time.Minute)
 			},
 			buildStubs: func(store *mockdb.MockStore) {
 				store.EXPECT().
@@ -167,9 +173,10 @@ func TestCreateUserAPI(t *testing.T) {
 				"password":  "123",
 				"full_name": user.FullName,
 				"email":     user.Email,
+				"role":      util.ManagerRole,
 			},
 			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
-				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, "admin", time.Minute)
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, "admin",util.AdminRole, time.Minute)
 			},
 			buildStubs: func(store *mockdb.MockStore) {
 				store.EXPECT().
@@ -178,6 +185,27 @@ func TestCreateUserAPI(t *testing.T) {
 			},
 			checkResponse: func(recorder *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusBadRequest, recorder.Code)
+			},
+		},
+		{
+			name:"ManagerCannotCreateManagerUser",
+			body: gin.H{
+				"username":  user.Username,
+				"password":  password,
+				"full_name": user.FullName,
+				"email":     user.Email,
+				"role":      util.ManagerRole,
+			},
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, "manager",util.ManagerRole, time.Minute)
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().
+					CreateUser(gomock.Any(), gomock.Any()).
+					Times(0)
+			},
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusForbidden, recorder.Code)
 			},
 		},
 	}
@@ -330,6 +358,13 @@ func TestLoginUserAPI(t *testing.T) {
 func TestUpdateUserAPI(t *testing.T) {
 	user, password := randomUser(t)
 
+	reqBody := gin.H{
+		"username":  user.Username,
+		"password":  password,
+		"full_name": user.FullName,
+		"email":     user.Email,
+	}
+
 	testCases := []struct {
 		name          string
 		body          gin.H
@@ -339,14 +374,9 @@ func TestUpdateUserAPI(t *testing.T) {
 	}{
 		{
 			name: "OK",
-			body: gin.H{
-				"username":  user.Username,
-				"password":  password,
-				"full_name": user.FullName,
-				"email":     user.Email,
-			},
+			body: reqBody,
 			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
-				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.Username, time.Minute)
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.Username,util.AdminRole, time.Minute)
 			},
 			buildStubs: func(store *mockdb.MockStore) {
 				arg := db.UpdateUserParams{
@@ -367,12 +397,7 @@ func TestUpdateUserAPI(t *testing.T) {
 		},
 		{
 			name: "Unauthorized",
-			body: gin.H{
-				"username":  user.Username,
-				"password":  password,
-				"full_name": user.FullName,
-				"email":     user.Email,
-			},
+			body: reqBody,
 			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
 				// 不添加认证信息
 			},
@@ -387,14 +412,9 @@ func TestUpdateUserAPI(t *testing.T) {
 		},
 		{
 			name: "UpdateOtherUser",
-			body: gin.H{
-				"username":  user.Username,
-				"password":  password,
-				"full_name": user.FullName,
-				"email":     user.Email,
-			},
+			body: reqBody,
 			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
-				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, "otheruser", time.Minute)
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, "otheruser",util.AdminRole, time.Minute)
 			},
 			buildStubs: func(store *mockdb.MockStore) {
 				store.EXPECT().
@@ -407,14 +427,9 @@ func TestUpdateUserAPI(t *testing.T) {
 		},
 		{
 			name: "InternalError",
-			body: gin.H{
-				"username":  user.Username,
-				"password":  password,
-				"full_name": user.FullName,
-				"email":     user.Email,
-			},
+			body: reqBody,
 			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
-				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.Username, time.Minute)
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.Username,util.AdminRole, time.Minute)
 			},
 			buildStubs: func(store *mockdb.MockStore) {
 				store.EXPECT().
@@ -428,14 +443,9 @@ func TestUpdateUserAPI(t *testing.T) {
 		},
 		{
 			name: "UserNotFound",
-			body: gin.H{
-				"username":  user.Username,
-				"password":  password,
-				"full_name": user.FullName,
-				"email":     user.Email,
-			},
+			body: reqBody,
 			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
-				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.Username, time.Minute)
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.Username,util.AdminRole, time.Minute)
 			},
 			buildStubs: func(store *mockdb.MockStore) {
 				store.EXPECT().

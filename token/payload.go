@@ -16,11 +16,12 @@ var (
 type Payload struct {
 	Username string    `json:"username"`
 	ID       uuid.UUID `json:"id"`
+	Role     string    `json:"role"`
 	// 直接嵌入，不再定义冗余的 ID, IssuedAt, ExpiredAt
 	jwt.RegisteredClaims
 }
 
-func NewPayload(username string, duration time.Duration) (*Payload, error) {
+func NewPayload(username string, role string, duration time.Duration) (*Payload, error) {
 	tokenID, err := uuid.NewRandom()
 	if err != nil {
 		return nil, err
@@ -30,6 +31,8 @@ func NewPayload(username string, duration time.Duration) (*Payload, error) {
 	payload := &Payload{
 		Username: username,
 		ID:       tokenID,
+		Role:     role,
+
 		RegisteredClaims: jwt.RegisteredClaims{
 			// v5 要求使用 NumericDate 类型
 			Subject:   username,                              // 对应 JWT 的 sub (可选)
