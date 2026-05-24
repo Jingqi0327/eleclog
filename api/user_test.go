@@ -3,6 +3,7 @@ package api
 import (
 	"bytes"
 	"database/sql"
+
 	"encoding/json"
 	"io"
 	"net/http"
@@ -134,7 +135,7 @@ func TestCreateUserAPI(t *testing.T) {
 				"role":      util.ManagerRole,
 			},
 			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
-				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, "admin",util.AdminRole, time.Minute)
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, "admin", util.AdminRole, time.Minute)
 			},
 			buildStubs: func(store *mockdb.MockStore) {
 				store.EXPECT().
@@ -155,7 +156,7 @@ func TestCreateUserAPI(t *testing.T) {
 				"role":      util.ManagerRole,
 			},
 			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
-				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, "admin", util.AdminRole,time.Minute)
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, "admin", util.AdminRole, time.Minute)
 			},
 			buildStubs: func(store *mockdb.MockStore) {
 				store.EXPECT().
@@ -176,7 +177,7 @@ func TestCreateUserAPI(t *testing.T) {
 				"role":      util.ManagerRole,
 			},
 			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
-				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, "admin",util.AdminRole, time.Minute)
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, "admin", util.AdminRole, time.Minute)
 			},
 			buildStubs: func(store *mockdb.MockStore) {
 				store.EXPECT().
@@ -188,7 +189,7 @@ func TestCreateUserAPI(t *testing.T) {
 			},
 		},
 		{
-			name:"ManagerCannotCreateManagerUser",
+			name: "ManagerCannotCreateManagerUser",
 			body: gin.H{
 				"username":  user.Username,
 				"password":  password,
@@ -197,7 +198,7 @@ func TestCreateUserAPI(t *testing.T) {
 				"role":      util.ManagerRole,
 			},
 			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
-				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, "manager",util.ManagerRole, time.Minute)
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, "manager", util.ManagerRole, time.Minute)
 			},
 			buildStubs: func(store *mockdb.MockStore) {
 				store.EXPECT().
@@ -272,7 +273,7 @@ func TestLoginUserAPI(t *testing.T) {
 				store.EXPECT().
 					GetUser(gomock.Any(), gomock.Any()).
 					Times(1).
-					Return(db.User{}, sql.ErrNoRows)
+					Return(db.User{}, db.ErrRecordNotFound)
 			},
 			checkResponse: func(recorder *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusNotFound, recorder.Code)
@@ -376,7 +377,7 @@ func TestUpdateUserAPI(t *testing.T) {
 			name: "OK",
 			body: reqBody,
 			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
-				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.Username,util.AdminRole, time.Minute)
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.Username, util.AdminRole, time.Minute)
 			},
 			buildStubs: func(store *mockdb.MockStore) {
 				arg := db.UpdateUserParams{
@@ -414,7 +415,7 @@ func TestUpdateUserAPI(t *testing.T) {
 			name: "UpdateOtherUser",
 			body: reqBody,
 			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
-				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, "otheruser",util.AdminRole, time.Minute)
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, "otheruser", util.AdminRole, time.Minute)
 			},
 			buildStubs: func(store *mockdb.MockStore) {
 				store.EXPECT().
@@ -429,7 +430,7 @@ func TestUpdateUserAPI(t *testing.T) {
 			name: "InternalError",
 			body: reqBody,
 			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
-				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.Username,util.AdminRole, time.Minute)
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.Username, util.AdminRole, time.Minute)
 			},
 			buildStubs: func(store *mockdb.MockStore) {
 				store.EXPECT().
@@ -445,13 +446,13 @@ func TestUpdateUserAPI(t *testing.T) {
 			name: "UserNotFound",
 			body: reqBody,
 			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
-				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.Username,util.AdminRole, time.Minute)
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.Username, util.AdminRole, time.Minute)
 			},
 			buildStubs: func(store *mockdb.MockStore) {
 				store.EXPECT().
 					UpdateUser(gomock.Any(), gomock.Any()).
 					Times(1).
-					Return(db.User{}, sql.ErrNoRows)
+					Return(db.User{}, db.ErrRecordNotFound)
 			},
 			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusNotFound, recorder.Code)

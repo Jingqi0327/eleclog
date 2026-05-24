@@ -1,12 +1,12 @@
 package api
 
 import (
-	"database/sql"
 	"errors"
 	"net/http"
 	"time"
 
 	db "github.com/Jingqi0327/eleclog/db/sqlc"
+	"github.com/Jingqi0327/eleclog/token"
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -17,6 +17,15 @@ type createRoomRequest struct {
 	BuildingCode string `json:"building_code" binding:"required"`
 	FloorCode    string `json:"floor_code" binding:"required"`
 	RoomCode     string `json:"room_code" binding:"required"`
+}
+
+type bindRoomRequest struct {
+	Name         string `json:"name" binding:"required"`
+	AreaID       string `json:"area_id" binding:"required"`
+	BuildingCode string `json:"building_code" binding:"required"`
+	FloorCode    string `json:"floor_code" binding:"required"`
+	RoomCode     string `json:"room_code" binding:"required"`
+	Threshold    int32  `json:"threshold" binding:"required,min=0"`
 }
 
 type createRoomResponse struct {
@@ -44,7 +53,7 @@ func (server *Server) createRoom(ctx *gin.Context) {
 	}
 
 	room, err := server.store.CreateRoom(ctx, arg)
-	if err != nil { 
+	if err != nil {
 		if db.ErrorCode(err) == db.UniqueViolation {
 			ctx.JSON(http.StatusBadRequest, errorResponse(errors.New("room already exists")))
 			return
@@ -60,6 +69,43 @@ func (server *Server) createRoom(ctx *gin.Context) {
 		FloorCode:    room.FloorCode,
 		RoomCode:     room.RoomCode,
 		CreatedAt:    room.CreatedAt,
+	}
+
+	ctx.JSON(http.StatusOK, resp)
+}
+
+func (server *Server) bindRoomToUser(ctx *gin.Context) {
+	var req bindRoomRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	payload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
+
+	arg := db.BindRoomToUserTxParams{
+		Username:     payload.Username,
+		Name:         req.Name,
+		AreaID:       req.AreaID,
+		BuildingCode: req.BuildingCode,
+		FloorCode:    req.FloorCode,
+		RoomCode:     req.RoomCode,
+		Threshold:    req.Threshold,
+	}
+
+	result, err := server.store.BindRoomToUserTx(ctx, arg)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	resp := createRoomResponse{
+		Name:         result.Room.Name,
+		AreaID:       result.Room.AreaID,
+		BuildingCode: result.Room.BuildingCode,
+		FloorCode:    result.Room.FloorCode,
+		RoomCode:     result.Room.RoomCode,
+		CreatedAt:    result.Room.CreatedAt,
 	}
 
 	ctx.JSON(http.StatusOK, resp)
@@ -100,7 +146,7 @@ func (server *Server) getRoom(ctx *gin.Context) {
 
 	room, err := server.store.GetRoom(ctx, req.ID)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+		if errors.Is(err, db.ErrRecordNotFound) {
 			ctx.JSON(http.StatusNotFound, errorResponse(err))
 			return
 		}
@@ -129,18 +175,20 @@ func (server *Server) listRooms(ctx *gin.Context) {
 		return
 	}
 
-	arg := db.ListRoomsParams{
+	var rooms []db.Room
+	var total int64
+	var err error
+
+	argAll := db.ListRoomsParams{
 		Limit:  req.PageSize,
 		Offset: (req.PageID - 1) * req.PageSize,
 	}
-
-	rooms, err := server.store.ListRooms(ctx, arg)
+	rooms, err = server.store.ListRooms(ctx, argAll)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
-
-	total, err := server.store.CountRooms(ctx)
+	total, err = server.store.CountRooms(ctx)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
@@ -204,7 +252,7 @@ func (server *Server) updateRoom(ctx *gin.Context) {
 
 	room, err := server.store.UpdateRoom(ctx, arg)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+		if errors.Is(err, db.ErrRecordNotFound) {
 			ctx.JSON(http.StatusNotFound, errorResponse(err))
 			return
 		}

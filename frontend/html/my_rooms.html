@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>我的房间 — ElecLog</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <link rel="stylesheet" href="css/global.css" />
+</head>
+<body>
+  <header>
+    <a href="index.html" class="logo">
+      <div class="logo-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 3L4 14h7v7l9-11h-7z"/></svg>
+      </div>
+      <span class="logo-name">ElecLog</span>
+    </a>
+    <nav class="nav-btns"></nav>
+  </header>
+
+  <main>
+    <h1>我的房间</h1>
+
+    <!-- 房间列表 -->
+    <div class="card">
+      <div class="card-header">
+        <h2>我的监控房间</h2>
+        <div style="display:flex; gap: 0.5rem;">
+          <button class="btn ghost" onclick="refreshRooms(true)" title="刷新列表">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+          </button>
+          <button class="btn primary" onclick="openBindRoomModal()">添加房间</button>
+        </div>
+      </div>
+      <table id="roomTable">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>名称</th>
+            <th>告警阈值</th>
+            <th>状态</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody id="roomTableBody">
+          <tr><td colspan="5" class="empty-row">加载中…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+
+  <!-- 阈值配置弹窗 -->
+  <div class="modal-overlay" id="thresholdModal">
+    <div class="modal">
+      <h3>设置告警阈值</h3>
+      <div class="field">
+        <label>房间</label>
+        <div id="modalRoomName" style="padding: 0.5rem 0; font-weight:600; color:var(--accent)"></div>
+      </div>
+      <div class="field">
+        <label>告警阈值（元）</label>
+        <input type="number" id="thresholdInput" min="0" max="9999" step="1" placeholder="输入余额阈值（整数），低于此值时邮件告警" />
+      </div>
+      <div class="field" id="enabledField" style="display:none">
+        <label>启用状态</label>
+        <div style="display:flex; align-items:center; gap:0.6rem; margin-top:0.5rem">
+          <label class="switch">
+            <input type="checkbox" id="toggleEnabledBtn" onchange="toggleEnabled()">
+            <span class="slider"></span>
+          </label>
+          <span id="enabledStatusText" style="font-size:0.85rem;color:var(--text);font-weight:500;"></span>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" onclick="closeModal()">取消</button>
+        <button class="btn primary" id="saveThresholdBtn" onclick="saveThreshold()">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 添加房间 (绑定) 弹窗 -->
+  <div class="modal-overlay" id="bindRoomModal">
+    <div class="modal">
+      <h3>添加监控房间</h3>
+      <div class="field">
+        <label>校区</label>
+        <select id="bindArea" onchange="onBindAreaChange()"><option value="">请选择校区</option></select>
+      </div>
+      <div class="field">
+        <label>楼栋</label>
+        <select id="bindBuilding" disabled onchange="onBindBuildingChange()"><option value="">请先选择校区</option></select>
+      </div>
+      <div class="field">
+        <label>楼层</label>
+        <select id="bindFloor" disabled onchange="onBindFloorChange()"><option value="">请先选择楼栋</option></select>
+      </div>
+      <div class="field">
+        <label>房间</label>
+        <select id="bindRoom" disabled onchange="onBindRoomChange()"><option value="">请先选择楼层</option></select>
+      </div>
+      <div class="field">
+        <label>告警阈值 (元)</label>
+        <input type="number" id="bindThresholdInput" value="10" placeholder="例如：10" />
+      </div>
+      <div class="modal-footer">
+        <button class="btn" onclick="closeBindRoomModal()">取消</button>
+        <button class="btn primary" id="bindRoomBtn" onclick="doBindRoom()" disabled>添加</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="js/pages/my_rooms.js?v=1779613562"></script>
+</body>
+</html>

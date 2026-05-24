@@ -11,41 +11,41 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func createRandomUserRoomNotification(t *testing.T) UserRoomNotification {
+func createRandomUserRoom(t *testing.T) UserRoom {
 	user := createRandomUser(t)
 	room := createRandomRoom(t)
 
-	arg := CreateUserRoomNotificationParams{
+	arg := CreateUserRoomParams{
 		Username:  user.Username,
 		RoomID:    room.ID,
 		Threshold: int32(util.RandomInt(10, 100)),
 	}
 
-	notification, err := testStore.CreateUserRoomNotification(context.Background(), arg)
+	notification, err := testStore.CreateUserRoom(context.Background(), arg)
 	require.NoError(t, err)
 	require.NotEmpty(t, notification)
 
 	require.Equal(t, arg.Username, notification.Username)
 	require.Equal(t, arg.RoomID, notification.RoomID)
 	require.Equal(t, arg.Threshold, notification.Threshold)
-	require.True(t, notification.IsEnabled)
+	require.False(t, notification.IsEnabled)
 
 	return notification
 }
 
-func TestCreateUserRoomNotification(t *testing.T) {
-	createRandomUserRoomNotification(t)
+func TestCreateUserRoom(t *testing.T) {
+	createRandomUserRoom(t)
 }
 
-func TestGetUserRoomNotification(t *testing.T) {
-	notif1 := createRandomUserRoomNotification(t)
+func TestGetUserRoom(t *testing.T) {
+	notif1 := createRandomUserRoom(t)
 
-	arg := GetUserRoomNotificationParams{
+	arg := GetUserRoomParams{
 		Username: notif1.Username,
 		RoomID:   notif1.RoomID,
 	}
 
-	notif2, err := testStore.GetUserRoomNotification(context.Background(), arg)
+	notif2, err := testStore.GetUserRoom(context.Background(), arg)
 	require.NoError(t, err)
 	require.NotEmpty(t, notif2)
 
@@ -56,40 +56,40 @@ func TestGetUserRoomNotification(t *testing.T) {
 	require.WithinDuration(t, notif1.LastNotifiedAt, notif2.LastNotifiedAt, time.Second)
 }
 
-func TestDeleteUserRoomNotification(t *testing.T) {
-	notif1 := createRandomUserRoomNotification(t)
+func TestDeleteUserRoom(t *testing.T) {
+	notif1 := createRandomUserRoom(t)
 
-	argDelete := DeleteUserRoomNotificationParams{
+	argDelete := DeleteUserRoomParams{
 		Username: notif1.Username,
 		RoomID:   notif1.RoomID,
 	}
-	err := testStore.DeleteUserRoomNotification(context.Background(), argDelete)
+	err := testStore.DeleteUserRoom(context.Background(), argDelete)
 	require.NoError(t, err)
 
-	argGet := GetUserRoomNotificationParams{
+	argGet := GetUserRoomParams{
 		Username: notif1.Username,
 		RoomID:   notif1.RoomID,
 	}
-	notif2, err := testStore.GetUserRoomNotification(context.Background(), argGet)
+	notif2, err := testStore.GetUserRoom(context.Background(), argGet)
 	require.Error(t, err)
 	require.EqualError(t, err, ErrRecordNotFound.Error())
 	require.Empty(t, notif2)
 }
 
-func TestUpdateUserRoomNotification(t *testing.T) {
-	notif1 := createRandomUserRoomNotification(t)
+func TestUpdateUserRoom(t *testing.T) {
+	notif1 := createRandomUserRoom(t)
 
 	newThreshold := int32(util.RandomInt(10, 100))
 	newIsEnabled := false
 
-	arg := UpdateUserRoomNotificationParams{
+	arg := UpdateUserRoomParams{
 		Username:  notif1.Username,
 		RoomID:    notif1.RoomID,
 		Threshold: pgtype.Int4{Int32: newThreshold, Valid: true},
 		IsEnabled: pgtype.Bool{Bool: newIsEnabled, Valid: true},
 	}
 
-	notif2, err := testStore.UpdateUserRoomNotification(context.Background(), arg)
+	notif2, err := testStore.UpdateUserRoom(context.Background(), arg)
 	require.NoError(t, err)
 	require.NotEmpty(t, notif2)
 
@@ -100,18 +100,18 @@ func TestUpdateUserRoomNotification(t *testing.T) {
 	require.WithinDuration(t, notif1.LastNotifiedAt, notif2.LastNotifiedAt, time.Second)
 }
 
-func TestUpdateUserRoomNotificationLastNotifiedAt(t *testing.T) {
-	notif1 := createRandomUserRoomNotification(t)
+func TestUpdateUserRoomLastNotifiedAt(t *testing.T) {
+	notif1 := createRandomUserRoom(t)
 
 	newTime := time.Now().Add(-24 * time.Hour)
 
-	arg := UpdateUserRoomNotificationLastNotifiedAtParams{
+	arg := UpdateUserRoomLastNotifiedAtParams{
 		Username:       notif1.Username,
 		RoomID:         notif1.RoomID,
 		LastNotifiedAt: newTime,
 	}
 
-	notif2, err := testStore.UpdateUserRoomNotificationLastNotifiedAt(context.Background(), arg)
+	notif2, err := testStore.UpdateUserRoomLastNotifiedAt(context.Background(), arg)
 	require.NoError(t, err)
 	require.NotEmpty(t, notif2)
 
@@ -122,43 +122,43 @@ func TestUpdateUserRoomNotificationLastNotifiedAt(t *testing.T) {
 	require.WithinDuration(t, newTime, notif2.LastNotifiedAt, time.Second)
 }
 
-func TestListUserRoomNotifications(t *testing.T) {
+func TestListUserRooms(t *testing.T) {
 	for i := 0; i < 5; i++ {
-		createRandomUserRoomNotification(t)
+		createRandomUserRoom(t)
 	}
 
-	arg := ListUserRoomNotificationsParams{
+	arg := ListUserRoomsParams{
 		Limit:  5,
 		Offset: 0,
 	}
 
-	notifs, err := testStore.ListUserRoomNotifications(context.Background(), arg)
+	notifs, err := testStore.ListUserRooms(context.Background(), arg)
 	require.NoError(t, err)
 	require.NotEmpty(t, notifs)
 	require.LessOrEqual(t, len(notifs), 5)
 }
 
-func TestListUserRoomNotificationsByUser(t *testing.T) {
+func TestListUserRoomsByUser(t *testing.T) {
 	user := createRandomUser(t)
 
 	for i := 0; i < 10; i++ {
 		room := createRandomRoom(t)
-		arg := CreateUserRoomNotificationParams{
+		arg := CreateUserRoomParams{
 			Username:  user.Username,
 			RoomID:    room.ID,
 			Threshold: int32(util.RandomInt(10, 100)),
 		}
-		_, err := testStore.CreateUserRoomNotification(context.Background(), arg)
+		_, err := testStore.CreateUserRoom(context.Background(), arg)
 		require.NoError(t, err)
 	}
 
-	arg := ListUserRoomNotificationsByUserParams{
+	arg := ListUserRoomsByUserParams{
 		Username: user.Username,
 		Limit:    5,
 		Offset:   0,
 	}
 
-	notifs, err := testStore.ListUserRoomNotificationsByUser(context.Background(), arg)
+	notifs, err := testStore.ListUserRoomsByUser(context.Background(), arg)
 	require.NoError(t, err)
 	require.Len(t, notifs, 5)
 
@@ -168,21 +168,21 @@ func TestListUserRoomNotificationsByUser(t *testing.T) {
 	}
 }
 
-func TestListUserRoomNotificationsByRoom(t *testing.T) {
+func TestListUserRoomsByRoom(t *testing.T) {
 	room := createRandomRoom(t)
 
 	for i := 0; i < 5; i++ {
 		user := createRandomUser(t)
-		arg := CreateUserRoomNotificationParams{
+		arg := CreateUserRoomParams{
 			Username:  user.Username,
 			RoomID:    room.ID,
 			Threshold: int32(util.RandomInt(10, 100)),
 		}
-		_, err := testStore.CreateUserRoomNotification(context.Background(), arg)
+		_, err := testStore.CreateUserRoom(context.Background(), arg)
 		require.NoError(t, err)
 	}
 
-	notifs, err := testStore.ListUserRoomNotificationsByRoom(context.Background(), room.ID)
+	notifs, err := testStore.ListUserRoomsByRoom(context.Background(), room.ID)
 	require.NoError(t, err)
 	require.Len(t, notifs, 5)
 
@@ -192,19 +192,27 @@ func TestListUserRoomNotificationsByRoom(t *testing.T) {
 	}
 }
 
-func TestListDueUserRoomNotifications(t *testing.T) {
-	notif := createRandomUserRoomNotification(t)
+func TestListDueUserRooms(t *testing.T) {
+	notif := createRandomUserRoom(t)
 
 	newTime := time.Now().Add(-25 * time.Hour)
-	argUpdate := UpdateUserRoomNotificationLastNotifiedAtParams{
+	argUpdate := UpdateUserRoomLastNotifiedAtParams{
 		Username:       notif.Username,
 		RoomID:         notif.RoomID,
 		LastNotifiedAt: newTime,
 	}
-	_, err := testStore.UpdateUserRoomNotificationLastNotifiedAt(context.Background(), argUpdate)
+	_, err := testStore.UpdateUserRoomLastNotifiedAt(context.Background(), argUpdate)
 	require.NoError(t, err)
 
-	notifs, err := testStore.ListDueUserRoomNotifications(context.Background())
+	argEnable := UpdateUserRoomParams{
+		Username:  notif.Username,
+		RoomID:    notif.RoomID,
+		IsEnabled: pgtype.Bool{Bool: true, Valid: true},
+	}
+	_, err = testStore.UpdateUserRoom(context.Background(), argEnable)
+	require.NoError(t, err)
+
+	notifs, err := testStore.ListDueUserRooms(context.Background())
 	require.NoError(t, err)
 	require.NotEmpty(t, notifs)
 
@@ -219,15 +227,15 @@ func TestListDueUserRoomNotifications(t *testing.T) {
 	require.True(t, found)
 }
 
-func TestCountUserRoomNotifications(t *testing.T) {
-	beforeCount, err := testStore.CountUserRoomNotifications(context.Background())
+func TestCountUserRooms(t *testing.T) {
+	beforeCount, err := testStore.CountUserRooms(context.Background())
 	require.NoError(t, err)
 
 	for i := 0; i < 5; i++ {
-		createRandomUserRoomNotification(t)
+		createRandomUserRoom(t)
 	}
 
-	afterCount, err := testStore.CountUserRoomNotifications(context.Background())
+	afterCount, err := testStore.CountUserRooms(context.Background())
 	require.NoError(t, err)
 	require.Equal(t, beforeCount+5, afterCount)
 }

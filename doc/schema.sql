@@ -1,6 +1,6 @@
 -- SQL dump generated using DBML (dbml.dbdiagram.io)
 -- Database: PostgreSQL
--- Generated at: 2026-05-23T10:50:36.846Z
+-- Generated at: 2026-05-24T05:48:21.780Z
 
 CREATE TABLE "rooms" (
   "id" BIGSERIAL PRIMARY KEY,
@@ -28,11 +28,11 @@ CREATE TABLE "users" (
   "created_at" timestamptz NOT NULL DEFAULT (now())
 );
 
-CREATE TABLE "user_room_notifications" (
+CREATE TABLE "user_rooms" (
   "username" varchar NOT NULL,
   "room_id" bigint NOT NULL,
   "threshold" int NOT NULL DEFAULT 10,
-  "is_enabled" boolean NOT NULL DEFAULT true,
+  "is_enabled" boolean NOT NULL DEFAULT false,
   "last_notified_at" timestamptz NOT NULL DEFAULT '0001-01-01',
   PRIMARY KEY ("username", "room_id")
 );
@@ -47,12 +47,12 @@ COMMENT ON TABLE "rooms" IS '存储需要监控的寝室配置信息';
 
 COMMENT ON TABLE "electricity_records" IS '存储抓取的电费流水数据';
 
-COMMENT ON COLUMN "user_room_notifications"."threshold" IS '预警阈值，单位: 元';
+COMMENT ON COLUMN "user_rooms"."threshold" IS '预警阈值，单位: 元';
 
-COMMENT ON COLUMN "user_room_notifications"."last_notified_at" IS '上次发送邮件的时间';
+COMMENT ON COLUMN "user_rooms"."last_notified_at" IS '上次发送邮件的时间';
 
 ALTER TABLE "electricity_records" ADD FOREIGN KEY ("room_id") REFERENCES "rooms" ("id") ON DELETE CASCADE DEFERRABLE INITIALLY IMMEDIATE;
 
-ALTER TABLE "user_room_notifications" ADD FOREIGN KEY ("username") REFERENCES "users" ("username") ON DELETE CASCADE DEFERRABLE INITIALLY IMMEDIATE;
+ALTER TABLE "user_rooms" ADD FOREIGN KEY ("username") REFERENCES "users" ("username") ON DELETE CASCADE DEFERRABLE INITIALLY IMMEDIATE;
 
-ALTER TABLE "user_room_notifications" ADD FOREIGN KEY ("room_id") REFERENCES "rooms" ("id") ON DELETE CASCADE DEFERRABLE INITIALLY IMMEDIATE;
+ALTER TABLE "user_rooms" ADD FOREIGN KEY ("room_id") REFERENCES "rooms" ("id") ON DELETE CASCADE DEFERRABLE INITIALLY IMMEDIATE;
