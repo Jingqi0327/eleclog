@@ -7,6 +7,8 @@ import (
 	"time"
 
 	db "github.com/Jingqi0327/eleclog/db/sqlc"
+	"github.com/Jingqi0327/eleclog/token"
+	"github.com/Jingqi0327/eleclog/util"
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -51,6 +53,75 @@ func (server *Server) createRoom(ctx *gin.Context) {
 		}
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
+	}
+
+	resp := createRoomResponse{
+		Name:         room.Name,
+		AreaID:       room.AreaID,
+		BuildingCode: room.BuildingCode,
+		FloorCode:    room.FloorCode,
+		RoomCode:     room.RoomCode,
+		CreatedAt:    room.CreatedAt,
+	}
+
+	ctx.JSON(http.StatusOK, resp)
+}
+
+func (server *Server) bindRoomToUser(ctx *gin.Context) {
+	var req createRoomRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	argFields := db.GetRoomByUniqueFieldsParams{
+		Name:         req.Name,
+		AreaID:       req.AreaID,
+		BuildingCode: req.BuildingCode,
+		FloorCode:    req.FloorCode,
+		RoomCode:     req.RoomCode,
+	}
+
+	var room db.Room
+	room, err := server.store.GetRoomByUniqueFields(ctx, argFields)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			// Room does not exist, create it
+			argCreate := db.CreateRoomParams{
+				Name:         req.Name,
+				AreaID:       req.AreaID,
+				BuildingCode: req.BuildingCode,
+				FloorCode:    req.FloorCode,
+				RoomCode:     req.RoomCode,
+			}
+			room, err = server.store.CreateRoom(ctx, argCreate)
+			if err != nil {
+				ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+				return
+			}
+		} else {
+			ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+			return
+		}
+	}
+
+	// Now we have the room, bind it to the current user
+	payload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
+	argBind := db.CreateUserRoomParams{
+		Username:  payload.Username,
+		RoomID:    room.ID,
+		Threshold: 10,
+		IsEnabled: false,
+	}
+
+	_, err = server.store.CreateUserRoom(ctx, argBind)
+	if err != nil {
+		if db.ErrorCode(err) == db.UniqueViolation {
+			// Already bound, we can just return success
+		} else {
+			ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+			return
+		}
 	}
 
 	resp := createRoomResponse{
@@ -129,21 +200,43 @@ func (server *Server) listRooms(ctx *gin.Context) {
 		return
 	}
 
-	arg := db.ListRoomsParams{
-		Limit:  req.PageSize,
-		Offset: (req.PageID - 1) * req.PageSize,
-	}
+	payload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
 
-	rooms, err := server.store.ListRooms(ctx, arg)
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
-		return
-	}
+	var rooms []db.Room
+	var total int64
+	var err error
 
-	total, err := server.store.CountRooms(ctx)
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
-		return
+	if payload.Role == util.UserRole {
+		argUser := db.ListRoomsByUserParams{
+			Username: payload.Username,
+			Limit:    req.PageSize,
+			Offset:   (req.PageID - 1) * req.PageSize,
+		}
+		rooms, err = server.store.ListRoomsByUser(ctx, argUser)
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+			return
+		}
+		total, err = server.store.CountRoomsByUser(ctx, payload.Username)
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+			return
+		}
+	} else {
+		argAll := db.ListRoomsParams{
+			Limit:  req.PageSize,
+			Offset: (req.PageID - 1) * req.PageSize,
+		}
+		rooms, err = server.store.ListRooms(ctx, argAll)
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+			return
+		}
+		total, err = server.store.CountRooms(ctx)
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+			return
+		}
 	}
 
 	resp := listRoomsResponse{

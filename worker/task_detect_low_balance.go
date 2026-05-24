@@ -45,7 +45,7 @@ func (scheduler *RedisTaskScheduler) ScheduleDetectLowBalance(cron string) error
 func (processor *RedisTaskProcessor) ProcessTaskDetectLowBalance(ctx context.Context, task *asynq.Task) error {
 	logger.Log.Info("[Processor] Processing task: 开始检测低于余额阈值的房间")
 
-	notifications, err := processor.store.ListDueUserRoomNotifications(ctx)
+	notifications, err := processor.store.ListDueUserRooms(ctx)
 	if err != nil {
 		return fmt.Errorf("Fail to query due user room notifications: %w", err)
 	}
@@ -68,14 +68,14 @@ func (processor *RedisTaskProcessor) ProcessTaskDetectLowBalance(ctx context.Con
 
 		if curSurplus < int64(notification.Threshold*100) {
 
-			arg := db.UpdateUserRoomNotificationLastNotifiedAtParams{
+			arg := db.UpdateUserRoomLastNotifiedAtParams{
 				Username: notification.Username,
 				RoomID:   notification.RoomID,
 			}
 
-			_, err = processor.store.UpdateRoomNotificationLastNotifiedAtTx(ctx, db.UpdateUserRoomNotificationLastNotifiedAtTxParams{
-				UpdateUserRoomNotificationLastNotifiedAtParams: arg,
-				AfterUpdate: func(n db.UserRoomNotification) error {
+			_, err = processor.store.UpdateRoomLastNotifiedAtTx(ctx, db.UpdateUserRoomLastNotifiedAtTxParams{
+				UpdateUserRoomLastNotifiedAtParams: arg,
+				AfterUpdate: func(n db.UserRoom) error {
 					sendEmailPayload := &PayloadSendNotificationEmail{
 						Username:  n.Username,
 						RoomID:    n.RoomID,

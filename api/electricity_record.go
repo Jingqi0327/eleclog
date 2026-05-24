@@ -11,6 +11,8 @@ import (
 	"time"
 
 	db "github.com/Jingqi0327/eleclog/db/sqlc"
+	"github.com/Jingqi0327/eleclog/token"
+	"github.com/Jingqi0327/eleclog/util"
 	"github.com/gin-gonic/gin"
 )
 
@@ -40,6 +42,23 @@ func (server *Server) getLatestElectricityBalance(ctx *gin.Context) {
 	if err := ctx.ShouldBindUri(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, errorResponse(err))
 		return
+	}
+
+	payload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
+	if payload.Role == util.UserRole {
+		argUserRoom := db.GetUserRoomParams{
+			Username: payload.Username,
+			RoomID:   req.RoomID,
+		}
+		_, err := server.store.GetUserRoom(ctx, argUserRoom)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				ctx.JSON(http.StatusForbidden, errorResponse(errors.New("forbidden: you do not have access to this room")))
+				return
+			}
+			ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+			return
+		}
 	}
 
 	record, err := server.store.GetLatestBalance(ctx, req.RoomID)
@@ -79,6 +98,23 @@ func (server *Server) getElectricityRecordByHourRange(ctx *gin.Context) {
 	if err := ctx.ShouldBindQuery(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, errorResponse(err))
 		return
+	}
+
+	payload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
+	if payload.Role == util.UserRole {
+		argUserRoom := db.GetUserRoomParams{
+			Username: payload.Username,
+			RoomID:   uriReq.RoomID,
+		}
+		_, err := server.store.GetUserRoom(ctx, argUserRoom)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				ctx.JSON(http.StatusForbidden, errorResponse(errors.New("forbidden: you do not have access to this room")))
+				return
+			}
+			ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+			return
+		}
 	}
 
 	// 💡 核心改动 1：为了计算第一个点的用量，我们需要往前多抓一个点

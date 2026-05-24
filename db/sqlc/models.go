@@ -36,7 +36,7 @@ type User struct {
 	Role           string    `json:"role"`
 }
 
-type UserRoomNotification struct {
+type UserRoom struct {
 	Username string `json:"username"`
 	RoomID   int64  `json:"room_id"`
 	// 预警阈值，单位: 元

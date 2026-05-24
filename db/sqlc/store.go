@@ -8,7 +8,7 @@ import (
 
 type Store interface {
 	Querier
-	UpdateRoomNotificationLastNotifiedAtTx(ctx context.Context, arg UpdateUserRoomNotificationLastNotifiedAtTxParams) (UserRoomNotification, error)
+	UpdateRoomLastNotifiedAtTx(ctx context.Context, arg UpdateUserRoomLastNotifiedAtTxParams) (UserRoom, error)
 }
 
 type SQLStore struct {

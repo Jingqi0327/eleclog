@@ -51,19 +51,34 @@ func (mr *MockStoreMockRecorder) CountRooms(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CountRooms", reflect.TypeOf((*MockStore)(nil).CountRooms), arg0)
 }
 
-// CountUserRoomNotifications mocks base method.
-func (m *MockStore) CountUserRoomNotifications(arg0 context.Context) (int64, error) {
+// CountRoomsByUser mocks base method.
+func (m *MockStore) CountRoomsByUser(arg0 context.Context, arg1 string) (int64, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CountUserRoomNotifications", arg0)
+	ret := m.ctrl.Call(m, "CountRoomsByUser", arg0, arg1)
 	ret0, _ := ret[0].(int64)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// CountUserRoomNotifications indicates an expected call of CountUserRoomNotifications.
-func (mr *MockStoreMockRecorder) CountUserRoomNotifications(arg0 interface{}) *gomock.Call {
+// CountRoomsByUser indicates an expected call of CountRoomsByUser.
+func (mr *MockStoreMockRecorder) CountRoomsByUser(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CountUserRoomNotifications", reflect.TypeOf((*MockStore)(nil).CountUserRoomNotifications), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CountRoomsByUser", reflect.TypeOf((*MockStore)(nil).CountRoomsByUser), arg0, arg1)
+}
+
+// CountUserRooms mocks base method.
+func (m *MockStore) CountUserRooms(arg0 context.Context) (int64, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CountUserRooms", arg0)
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CountUserRooms indicates an expected call of CountUserRooms.
+func (mr *MockStoreMockRecorder) CountUserRooms(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CountUserRooms", reflect.TypeOf((*MockStore)(nil).CountUserRooms), arg0)
 }
 
 // CountUsers mocks base method.
@@ -141,19 +156,19 @@ func (mr *MockStoreMockRecorder) CreateUser(arg0, arg1 interface{}) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateUser", reflect.TypeOf((*MockStore)(nil).CreateUser), arg0, arg1)
 }
 
-// CreateUserRoomNotification mocks base method.
-func (m *MockStore) CreateUserRoomNotification(arg0 context.Context, arg1 db.CreateUserRoomNotificationParams) (db.UserRoomNotification, error) {
+// CreateUserRoom mocks base method.
+func (m *MockStore) CreateUserRoom(arg0 context.Context, arg1 db.CreateUserRoomParams) (db.UserRoom, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateUserRoomNotification", arg0, arg1)
-	ret0, _ := ret[0].(db.UserRoomNotification)
+	ret := m.ctrl.Call(m, "CreateUserRoom", arg0, arg1)
+	ret0, _ := ret[0].(db.UserRoom)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// CreateUserRoomNotification indicates an expected call of CreateUserRoomNotification.
-func (mr *MockStoreMockRecorder) CreateUserRoomNotification(arg0, arg1 interface{}) *gomock.Call {
+// CreateUserRoom indicates an expected call of CreateUserRoom.
+func (mr *MockStoreMockRecorder) CreateUserRoom(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateUserRoomNotification", reflect.TypeOf((*MockStore)(nil).CreateUserRoomNotification), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateUserRoom", reflect.TypeOf((*MockStore)(nil).CreateUserRoom), arg0, arg1)
 }
 
 // DeleteRoom mocks base method.
@@ -170,18 +185,18 @@ func (mr *MockStoreMockRecorder) DeleteRoom(arg0, arg1 interface{}) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteRoom", reflect.TypeOf((*MockStore)(nil).DeleteRoom), arg0, arg1)
 }
 
-// DeleteUserRoomNotification mocks base method.
-func (m *MockStore) DeleteUserRoomNotification(arg0 context.Context, arg1 db.DeleteUserRoomNotificationParams) error {
+// DeleteUserRoom mocks base method.
+func (m *MockStore) DeleteUserRoom(arg0 context.Context, arg1 db.DeleteUserRoomParams) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteUserRoomNotification", arg0, arg1)
+	ret := m.ctrl.Call(m, "DeleteUserRoom", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// DeleteUserRoomNotification indicates an expected call of DeleteUserRoomNotification.
-func (mr *MockStoreMockRecorder) DeleteUserRoomNotification(arg0, arg1 interface{}) *gomock.Call {
+// DeleteUserRoom indicates an expected call of DeleteUserRoom.
+func (mr *MockStoreMockRecorder) DeleteUserRoom(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteUserRoomNotification", reflect.TypeOf((*MockStore)(nil).DeleteUserRoomNotification), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteUserRoom", reflect.TypeOf((*MockStore)(nil).DeleteUserRoom), arg0, arg1)
 }
 
 // GetLatestBalance mocks base method.
@@ -244,6 +259,21 @@ func (mr *MockStoreMockRecorder) GetRoom(arg0, arg1 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRoom", reflect.TypeOf((*MockStore)(nil).GetRoom), arg0, arg1)
 }
 
+// GetRoomByUniqueFields mocks base method.
+func (m *MockStore) GetRoomByUniqueFields(arg0 context.Context, arg1 db.GetRoomByUniqueFieldsParams) (db.Room, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetRoomByUniqueFields", arg0, arg1)
+	ret0, _ := ret[0].(db.Room)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetRoomByUniqueFields indicates an expected call of GetRoomByUniqueFields.
+func (mr *MockStoreMockRecorder) GetRoomByUniqueFields(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRoomByUniqueFields", reflect.TypeOf((*MockStore)(nil).GetRoomByUniqueFields), arg0, arg1)
+}
+
 // GetUser mocks base method.
 func (m *MockStore) GetUser(arg0 context.Context, arg1 string) (db.User, error) {
 	m.ctrl.T.Helper()
@@ -259,34 +289,34 @@ func (mr *MockStoreMockRecorder) GetUser(arg0, arg1 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUser", reflect.TypeOf((*MockStore)(nil).GetUser), arg0, arg1)
 }
 
-// GetUserRoomNotification mocks base method.
-func (m *MockStore) GetUserRoomNotification(arg0 context.Context, arg1 db.GetUserRoomNotificationParams) (db.UserRoomNotification, error) {
+// GetUserRoom mocks base method.
+func (m *MockStore) GetUserRoom(arg0 context.Context, arg1 db.GetUserRoomParams) (db.UserRoom, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetUserRoomNotification", arg0, arg1)
-	ret0, _ := ret[0].(db.UserRoomNotification)
+	ret := m.ctrl.Call(m, "GetUserRoom", arg0, arg1)
+	ret0, _ := ret[0].(db.UserRoom)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetUserRoomNotification indicates an expected call of GetUserRoomNotification.
-func (mr *MockStoreMockRecorder) GetUserRoomNotification(arg0, arg1 interface{}) *gomock.Call {
+// GetUserRoom indicates an expected call of GetUserRoom.
+func (mr *MockStoreMockRecorder) GetUserRoom(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUserRoomNotification", reflect.TypeOf((*MockStore)(nil).GetUserRoomNotification), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUserRoom", reflect.TypeOf((*MockStore)(nil).GetUserRoom), arg0, arg1)
 }
 
-// ListDueUserRoomNotifications mocks base method.
-func (m *MockStore) ListDueUserRoomNotifications(arg0 context.Context) ([]db.ListDueUserRoomNotificationsRow, error) {
+// ListDueUserRooms mocks base method.
+func (m *MockStore) ListDueUserRooms(arg0 context.Context) ([]db.ListDueUserRoomsRow, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListDueUserRoomNotifications", arg0)
-	ret0, _ := ret[0].([]db.ListDueUserRoomNotificationsRow)
+	ret := m.ctrl.Call(m, "ListDueUserRooms", arg0)
+	ret0, _ := ret[0].([]db.ListDueUserRoomsRow)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// ListDueUserRoomNotifications indicates an expected call of ListDueUserRoomNotifications.
-func (mr *MockStoreMockRecorder) ListDueUserRoomNotifications(arg0 interface{}) *gomock.Call {
+// ListDueUserRooms indicates an expected call of ListDueUserRooms.
+func (mr *MockStoreMockRecorder) ListDueUserRooms(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDueUserRoomNotifications", reflect.TypeOf((*MockStore)(nil).ListDueUserRoomNotifications), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDueUserRooms", reflect.TypeOf((*MockStore)(nil).ListDueUserRooms), arg0)
 }
 
 // ListRooms mocks base method.
@@ -319,49 +349,64 @@ func (mr *MockStoreMockRecorder) ListRoomsAll(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListRoomsAll", reflect.TypeOf((*MockStore)(nil).ListRoomsAll), arg0)
 }
 
-// ListUserRoomNotifications mocks base method.
-func (m *MockStore) ListUserRoomNotifications(arg0 context.Context, arg1 db.ListUserRoomNotificationsParams) ([]db.UserRoomNotification, error) {
+// ListRoomsByUser mocks base method.
+func (m *MockStore) ListRoomsByUser(arg0 context.Context, arg1 db.ListRoomsByUserParams) ([]db.Room, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListUserRoomNotifications", arg0, arg1)
-	ret0, _ := ret[0].([]db.UserRoomNotification)
+	ret := m.ctrl.Call(m, "ListRoomsByUser", arg0, arg1)
+	ret0, _ := ret[0].([]db.Room)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// ListUserRoomNotifications indicates an expected call of ListUserRoomNotifications.
-func (mr *MockStoreMockRecorder) ListUserRoomNotifications(arg0, arg1 interface{}) *gomock.Call {
+// ListRoomsByUser indicates an expected call of ListRoomsByUser.
+func (mr *MockStoreMockRecorder) ListRoomsByUser(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListUserRoomNotifications", reflect.TypeOf((*MockStore)(nil).ListUserRoomNotifications), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListRoomsByUser", reflect.TypeOf((*MockStore)(nil).ListRoomsByUser), arg0, arg1)
 }
 
-// ListUserRoomNotificationsByRoom mocks base method.
-func (m *MockStore) ListUserRoomNotificationsByRoom(arg0 context.Context, arg1 int64) ([]db.UserRoomNotification, error) {
+// ListUserRooms mocks base method.
+func (m *MockStore) ListUserRooms(arg0 context.Context, arg1 db.ListUserRoomsParams) ([]db.UserRoom, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListUserRoomNotificationsByRoom", arg0, arg1)
-	ret0, _ := ret[0].([]db.UserRoomNotification)
+	ret := m.ctrl.Call(m, "ListUserRooms", arg0, arg1)
+	ret0, _ := ret[0].([]db.UserRoom)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// ListUserRoomNotificationsByRoom indicates an expected call of ListUserRoomNotificationsByRoom.
-func (mr *MockStoreMockRecorder) ListUserRoomNotificationsByRoom(arg0, arg1 interface{}) *gomock.Call {
+// ListUserRooms indicates an expected call of ListUserRooms.
+func (mr *MockStoreMockRecorder) ListUserRooms(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListUserRoomNotificationsByRoom", reflect.TypeOf((*MockStore)(nil).ListUserRoomNotificationsByRoom), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListUserRooms", reflect.TypeOf((*MockStore)(nil).ListUserRooms), arg0, arg1)
 }
 
-// ListUserRoomNotificationsByUser mocks base method.
-func (m *MockStore) ListUserRoomNotificationsByUser(arg0 context.Context, arg1 db.ListUserRoomNotificationsByUserParams) ([]db.UserRoomNotification, error) {
+// ListUserRoomsByRoom mocks base method.
+func (m *MockStore) ListUserRoomsByRoom(arg0 context.Context, arg1 int64) ([]db.UserRoom, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListUserRoomNotificationsByUser", arg0, arg1)
-	ret0, _ := ret[0].([]db.UserRoomNotification)
+	ret := m.ctrl.Call(m, "ListUserRoomsByRoom", arg0, arg1)
+	ret0, _ := ret[0].([]db.UserRoom)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// ListUserRoomNotificationsByUser indicates an expected call of ListUserRoomNotificationsByUser.
-func (mr *MockStoreMockRecorder) ListUserRoomNotificationsByUser(arg0, arg1 interface{}) *gomock.Call {
+// ListUserRoomsByRoom indicates an expected call of ListUserRoomsByRoom.
+func (mr *MockStoreMockRecorder) ListUserRoomsByRoom(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListUserRoomNotificationsByUser", reflect.TypeOf((*MockStore)(nil).ListUserRoomNotificationsByUser), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListUserRoomsByRoom", reflect.TypeOf((*MockStore)(nil).ListUserRoomsByRoom), arg0, arg1)
+}
+
+// ListUserRoomsByUser mocks base method.
+func (m *MockStore) ListUserRoomsByUser(arg0 context.Context, arg1 db.ListUserRoomsByUserParams) ([]db.UserRoom, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListUserRoomsByUser", arg0, arg1)
+	ret0, _ := ret[0].([]db.UserRoom)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListUserRoomsByUser indicates an expected call of ListUserRoomsByUser.
+func (mr *MockStoreMockRecorder) ListUserRoomsByUser(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListUserRoomsByUser", reflect.TypeOf((*MockStore)(nil).ListUserRoomsByUser), arg0, arg1)
 }
 
 // UpdateRoom mocks base method.
@@ -379,19 +424,19 @@ func (mr *MockStoreMockRecorder) UpdateRoom(arg0, arg1 interface{}) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateRoom", reflect.TypeOf((*MockStore)(nil).UpdateRoom), arg0, arg1)
 }
 
-// UpdateRoomNotificationLastNotifiedAtTx mocks base method.
-func (m *MockStore) UpdateRoomNotificationLastNotifiedAtTx(arg0 context.Context, arg1 db.UpdateUserRoomNotificationLastNotifiedAtTxParams) (db.UserRoomNotification, error) {
+// UpdateRoomLastNotifiedAtTx mocks base method.
+func (m *MockStore) UpdateRoomLastNotifiedAtTx(arg0 context.Context, arg1 db.UpdateUserRoomLastNotifiedAtTxParams) (db.UserRoom, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateRoomNotificationLastNotifiedAtTx", arg0, arg1)
-	ret0, _ := ret[0].(db.UserRoomNotification)
+	ret := m.ctrl.Call(m, "UpdateRoomLastNotifiedAtTx", arg0, arg1)
+	ret0, _ := ret[0].(db.UserRoom)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// UpdateRoomNotificationLastNotifiedAtTx indicates an expected call of UpdateRoomNotificationLastNotifiedAtTx.
-func (mr *MockStoreMockRecorder) UpdateRoomNotificationLastNotifiedAtTx(arg0, arg1 interface{}) *gomock.Call {
+// UpdateRoomLastNotifiedAtTx indicates an expected call of UpdateRoomLastNotifiedAtTx.
+func (mr *MockStoreMockRecorder) UpdateRoomLastNotifiedAtTx(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateRoomNotificationLastNotifiedAtTx", reflect.TypeOf((*MockStore)(nil).UpdateRoomNotificationLastNotifiedAtTx), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateRoomLastNotifiedAtTx", reflect.TypeOf((*MockStore)(nil).UpdateRoomLastNotifiedAtTx), arg0, arg1)
 }
 
 // UpdateUser mocks base method.
@@ -409,32 +454,32 @@ func (mr *MockStoreMockRecorder) UpdateUser(arg0, arg1 interface{}) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateUser", reflect.TypeOf((*MockStore)(nil).UpdateUser), arg0, arg1)
 }
 
-// UpdateUserRoomNotification mocks base method.
-func (m *MockStore) UpdateUserRoomNotification(arg0 context.Context, arg1 db.UpdateUserRoomNotificationParams) (db.UserRoomNotification, error) {
+// UpdateUserRoom mocks base method.
+func (m *MockStore) UpdateUserRoom(arg0 context.Context, arg1 db.UpdateUserRoomParams) (db.UserRoom, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateUserRoomNotification", arg0, arg1)
-	ret0, _ := ret[0].(db.UserRoomNotification)
+	ret := m.ctrl.Call(m, "UpdateUserRoom", arg0, arg1)
+	ret0, _ := ret[0].(db.UserRoom)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// UpdateUserRoomNotification indicates an expected call of UpdateUserRoomNotification.
-func (mr *MockStoreMockRecorder) UpdateUserRoomNotification(arg0, arg1 interface{}) *gomock.Call {
+// UpdateUserRoom indicates an expected call of UpdateUserRoom.
+func (mr *MockStoreMockRecorder) UpdateUserRoom(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateUserRoomNotification", reflect.TypeOf((*MockStore)(nil).UpdateUserRoomNotification), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateUserRoom", reflect.TypeOf((*MockStore)(nil).UpdateUserRoom), arg0, arg1)
 }
 
-// UpdateUserRoomNotificationLastNotifiedAt mocks base method.
-func (m *MockStore) UpdateUserRoomNotificationLastNotifiedAt(arg0 context.Context, arg1 db.UpdateUserRoomNotificationLastNotifiedAtParams) (db.UserRoomNotification, error) {
+// UpdateUserRoomLastNotifiedAt mocks base method.
+func (m *MockStore) UpdateUserRoomLastNotifiedAt(arg0 context.Context, arg1 db.UpdateUserRoomLastNotifiedAtParams) (db.UserRoom, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateUserRoomNotificationLastNotifiedAt", arg0, arg1)
-	ret0, _ := ret[0].(db.UserRoomNotification)
+	ret := m.ctrl.Call(m, "UpdateUserRoomLastNotifiedAt", arg0, arg1)
+	ret0, _ := ret[0].(db.UserRoom)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// UpdateUserRoomNotificationLastNotifiedAt indicates an expected call of UpdateUserRoomNotificationLastNotifiedAt.
-func (mr *MockStoreMockRecorder) UpdateUserRoomNotificationLastNotifiedAt(arg0, arg1 interface{}) *gomock.Call {
+// UpdateUserRoomLastNotifiedAt indicates an expected call of UpdateUserRoomLastNotifiedAt.
+func (mr *MockStoreMockRecorder) UpdateUserRoomLastNotifiedAt(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateUserRoomNotificationLastNotifiedAt", reflect.TypeOf((*MockStore)(nil).UpdateUserRoomNotificationLastNotifiedAt), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateUserRoomLastNotifiedAt", reflect.TypeOf((*MockStore)(nil).UpdateUserRoomLastNotifiedAt), arg0, arg1)
 }

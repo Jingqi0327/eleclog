@@ -69,28 +69,30 @@ func (server *Server) setupRouter() {
 	managerRoutes.POST("/rooms", server.createRoom)
 	adminRoutes.DELETE("/rooms/:id", server.deleteRoom)	
 	managerRoutes.PUT("/rooms/:id", server.updateRoom)
-	router.GET("/rooms/:id", server.getRoom)
-	router.GET("/rooms", server.listRooms)
+	userRoutes.GET("/rooms/:id", server.getRoom)
+	userRoutes.GET("/rooms", server.listRooms)
 
 	managerRoutes.POST("/users", server.createUser)
 	userRoutes.PATCH("/users", server.UpdateUser)
+	userRoutes.POST("/users/rooms/bind", server.bindRoomToUser)
 	router.POST("/users/login", server.loginUser)
 
-	userRoutes.POST("/notifications", server.createUserRoomNotification)
-	userRoutes.GET("/notifications", server.listUserRoomNotifications)
-	userRoutes.GET("/notifications/:room_id", server.getUserRoomNotification)
-	userRoutes.PATCH("/notifications/:room_id", server.updateUserRoomNotification)
-	userRoutes.DELETE("/notifications/:room_id", server.deleteUserRoomNotification)
+	userRoutes.POST("/user-rooms", server.createUserRoom)
+	userRoutes.GET("/user-rooms", server.listUserRooms)
+	userRoutes.GET("/user-rooms/:room_id", server.getUserRoom)
+	userRoutes.PATCH("/user-rooms/:room_id", server.updateUserRoom)
+	userRoutes.DELETE("/user-rooms/:room_id", server.deleteUserRoom)
 	// 代理路由：转发到 xiaofubao 外部 API
 	managerRoutes.GET("/proxy/areas", server.proxyQueryArea)
 	managerRoutes.GET("/proxy/buildings", server.proxyQueryBuilding)
 	managerRoutes.GET("/proxy/floors", server.proxyQueryFloor)
 	managerRoutes.GET("/proxy/rooms", server.proxyQueryRoom)
 	managerRoutes.GET("/proxy/room-surplus", server.proxyQueryRoomSurplus)
+	
 	managerRoutes.POST("/electricity-balances/import/:room_id", server.importElectricityRecords)
 
-	router.GET("/electricity-balances/latest/:room_id", server.getLatestElectricityBalance)
-	router.GET("/electricity-balances/hour-range/:room_id", server.getElectricityRecordByHourRange)
+	userRoutes.GET("/electricity-balances/latest/:room_id", server.getLatestElectricityBalance)
+	userRoutes.GET("/electricity-balances/hour-range/:room_id", server.getElectricityRecordByHourRange)
 
 	server.router = router
 }

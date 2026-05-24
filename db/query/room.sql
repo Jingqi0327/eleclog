@@ -43,3 +43,23 @@ WHERE id = $1;
 -- name: CountRooms :one
 -- 统计寝室总数
 SELECT count(*) FROM rooms;
+
+-- name: GetRoomByUniqueFields :one
+-- 根据唯一字段组合查询寝室信息
+SELECT * FROM rooms
+WHERE name = $1 AND area_id = $2 AND building_code = $3 AND floor_code = $4 AND room_code = $5 LIMIT 1;
+
+-- name: ListRoomsByUser :many
+-- 根据用户查询其绑定的所有寝室信息
+SELECT r.* FROM rooms r
+JOIN user_rooms ur ON r.id = ur.room_id
+WHERE ur.username = $1
+ORDER BY r.id ASC
+LIMIT $2 
+OFFSET $3;
+
+-- name: CountRoomsByUser :one
+-- 统计用户绑定的寝室总数
+SELECT count(*) FROM rooms r
+JOIN user_rooms ur ON r.id = ur.room_id
+WHERE ur.username = $1;

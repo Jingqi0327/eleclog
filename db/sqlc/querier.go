@@ -12,8 +12,10 @@ import (
 type Querier interface {
 	// 统计寝室总数
 	CountRooms(ctx context.Context) (int64, error)
-	// 统计通知订阅总数
-	CountUserRoomNotifications(ctx context.Context) (int64, error)
+	// 统计用户绑定的寝室总数
+	CountRoomsByUser(ctx context.Context, username string) (int64, error)
+	// 统计关联总数
+	CountUserRooms(ctx context.Context) (int64, error)
 	// 查询用户个数
 	CountUsers(ctx context.Context) (int64, error)
 	// 插入一条电费记录
@@ -24,12 +26,12 @@ type Querier interface {
 	CreateRoom(ctx context.Context, arg CreateRoomParams) (Room, error)
 	//创建用户
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
-	// 创建用户-寝室通知订阅
-	CreateUserRoomNotification(ctx context.Context, arg CreateUserRoomNotificationParams) (UserRoomNotification, error)
+	// 创建用户-寝室关联
+	CreateUserRoom(ctx context.Context, arg CreateUserRoomParams) (UserRoom, error)
 	// 删除寝室信息
 	DeleteRoom(ctx context.Context, id int64) error
-	// 删除通知订阅
-	DeleteUserRoomNotification(ctx context.Context, arg DeleteUserRoomNotificationParams) error
+	// 删除关联
+	DeleteUserRoom(ctx context.Context, arg DeleteUserRoomParams) error
 	// 获取最新的余额记录
 	GetLatestBalance(ctx context.Context, roomID int64) (ElectricityRecord, error)
 	// 获取指定时间范围内已有记录的时间戳列表（用于导入去重）
@@ -38,30 +40,34 @@ type Querier interface {
 	GetRecordsByHourRange(ctx context.Context, arg GetRecordsByHourRangeParams) ([]ElectricityRecord, error)
 	// 根据ID查询寝室信息
 	GetRoom(ctx context.Context, id int64) (Room, error)
+	// 根据唯一字段组合查询寝室信息
+	GetRoomByUniqueFields(ctx context.Context, arg GetRoomByUniqueFieldsParams) (Room, error)
 	//查询单个用户
 	GetUser(ctx context.Context, username string) (User, error)
-	// 查询单个通知订阅
-	GetUserRoomNotification(ctx context.Context, arg GetUserRoomNotificationParams) (UserRoomNotification, error)
-	// 查询需要发送通知的订阅（开启且上次通知时间超过 24 小时）
-	ListDueUserRoomNotifications(ctx context.Context) ([]ListDueUserRoomNotificationsRow, error)
+	// 查询单个关联
+	GetUserRoom(ctx context.Context, arg GetUserRoomParams) (UserRoom, error)
+	// 查询需要发送通知的关联（开启且上次通知时间超过 24 小时）
+	ListDueUserRooms(ctx context.Context) ([]ListDueUserRoomsRow, error)
 	// 分页查询所有寝室信息
 	ListRooms(ctx context.Context, arg ListRoomsParams) ([]Room, error)
 	// 查询所有寝室信息
 	ListRoomsAll(ctx context.Context) ([]Room, error)
-	// 分页查询通知订阅
-	ListUserRoomNotifications(ctx context.Context, arg ListUserRoomNotificationsParams) ([]UserRoomNotification, error)
-	// 查询某个寝室的全部通知订阅
-	ListUserRoomNotificationsByRoom(ctx context.Context, roomID int64) ([]UserRoomNotification, error)
-	// 查询某个用户的全部通知订阅
-	ListUserRoomNotificationsByUser(ctx context.Context, arg ListUserRoomNotificationsByUserParams) ([]UserRoomNotification, error)
+	// 根据用户查询其绑定的所有寝室信息
+	ListRoomsByUser(ctx context.Context, arg ListRoomsByUserParams) ([]Room, error)
+	// 分页查询关联
+	ListUserRooms(ctx context.Context, arg ListUserRoomsParams) ([]UserRoom, error)
+	// 查询某个寝室的全部关联
+	ListUserRoomsByRoom(ctx context.Context, roomID int64) ([]UserRoom, error)
+	// 查询某个用户的全部关联
+	ListUserRoomsByUser(ctx context.Context, arg ListUserRoomsByUserParams) ([]UserRoom, error)
 	// 更新寝室信息
 	UpdateRoom(ctx context.Context, arg UpdateRoomParams) (Room, error)
 	//更新用户信息
 	UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error)
-	// 更新通知阈值和开关
-	UpdateUserRoomNotification(ctx context.Context, arg UpdateUserRoomNotificationParams) (UserRoomNotification, error)
+	// 更新关联阈值和开关
+	UpdateUserRoom(ctx context.Context, arg UpdateUserRoomParams) (UserRoom, error)
 	// 更新最后通知时间
-	UpdateUserRoomNotificationLastNotifiedAt(ctx context.Context, arg UpdateUserRoomNotificationLastNotifiedAtParams) (UserRoomNotification, error)
+	UpdateUserRoomLastNotifiedAt(ctx context.Context, arg UpdateUserRoomLastNotifiedAtParams) (UserRoom, error)
 }
 
 var _ Querier = (*Queries)(nil)

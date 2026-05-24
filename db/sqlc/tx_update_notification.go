@@ -5,26 +5,26 @@ import (
 	"time"
 )
 
-type UpdateUserRoomNotificationLastNotifiedAtTxParams struct {
-	UpdateUserRoomNotificationLastNotifiedAtParams
-	AfterUpdate func(notification UserRoomNotification) error
+type UpdateUserRoomLastNotifiedAtTxParams struct {
+	UpdateUserRoomLastNotifiedAtParams
+	AfterUpdate func(notification UserRoom) error
 }
 
-func (store *SQLStore) UpdateRoomNotificationLastNotifiedAtTx(ctx context.Context, arg UpdateUserRoomNotificationLastNotifiedAtTxParams) (UserRoomNotification, error) {
-	var userRoomNotification UserRoomNotification
+func (store *SQLStore) UpdateRoomLastNotifiedAtTx(ctx context.Context, arg UpdateUserRoomLastNotifiedAtTxParams) (UserRoom, error) {
+	var userRoom UserRoom
 	err := store.execTx(ctx, func(q *Queries) error {
 		arg.LastNotifiedAt = time.Now()
 		var updateErr error
-		userRoomNotification, updateErr = q.UpdateUserRoomNotificationLastNotifiedAt(ctx, arg.UpdateUserRoomNotificationLastNotifiedAtParams)
+		userRoom, updateErr = q.UpdateUserRoomLastNotifiedAt(ctx, arg.UpdateUserRoomLastNotifiedAtParams)
 		if updateErr != nil {
 			return updateErr
 		}
 
-		if cbErr := arg.AfterUpdate(userRoomNotification); cbErr != nil {
+		if cbErr := arg.AfterUpdate(userRoom); cbErr != nil {
 			return cbErr
 		}
 
 		return nil
 	})
-	return userRoomNotification, err
+	return userRoom, err
 }

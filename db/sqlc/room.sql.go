@@ -23,6 +23,20 @@ func (q *Queries) CountRooms(ctx context.Context) (int64, error) {
 	return count, err
 }
 
+const countRoomsByUser = `-- name: CountRoomsByUser :one
+SELECT count(*) FROM rooms r
+JOIN user_rooms ur ON r.id = ur.room_id
+WHERE ur.username = $1
+`
+
+// 统计用户绑定的寝室总数
+func (q *Queries) CountRoomsByUser(ctx context.Context, username string) (int64, error) {
+	row := q.db.QueryRow(ctx, countRoomsByUser, username)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createRoom = `-- name: CreateRoom :one
 INSERT INTO rooms (
   name, area_id, building_code, floor_code, room_code
@@ -94,6 +108,41 @@ func (q *Queries) GetRoom(ctx context.Context, id int64) (Room, error) {
 	return i, err
 }
 
+const getRoomByUniqueFields = `-- name: GetRoomByUniqueFields :one
+SELECT id, name, area_id, building_code, floor_code, room_code, created_at FROM rooms
+WHERE name = $1 AND area_id = $2 AND building_code = $3 AND floor_code = $4 AND room_code = $5 LIMIT 1
+`
+
+type GetRoomByUniqueFieldsParams struct {
+	Name         string `json:"name"`
+	AreaID       string `json:"area_id"`
+	BuildingCode string `json:"building_code"`
+	FloorCode    string `json:"floor_code"`
+	RoomCode     string `json:"room_code"`
+}
+
+// 根据唯一字段组合查询寝室信息
+func (q *Queries) GetRoomByUniqueFields(ctx context.Context, arg GetRoomByUniqueFieldsParams) (Room, error) {
+	row := q.db.QueryRow(ctx, getRoomByUniqueFields,
+		arg.Name,
+		arg.AreaID,
+		arg.BuildingCode,
+		arg.FloorCode,
+		arg.RoomCode,
+	)
+	var i Room
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.AreaID,
+		&i.BuildingCode,
+		&i.FloorCode,
+		&i.RoomCode,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const listRooms = `-- name: ListRooms :many
 SELECT id, name, area_id, building_code, floor_code, room_code, created_at FROM rooms
 ORDER BY id ASC
@@ -143,6 +192,50 @@ ORDER BY name
 // 查询所有寝室信息
 func (q *Queries) ListRoomsAll(ctx context.Context) ([]Room, error) {
 	rows, err := q.db.Query(ctx, listRoomsAll)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Room{}
+	for rows.Next() {
+		var i Room
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.AreaID,
+			&i.BuildingCode,
+			&i.FloorCode,
+			&i.RoomCode,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listRoomsByUser = `-- name: ListRoomsByUser :many
+SELECT r.id, r.name, r.area_id, r.building_code, r.floor_code, r.room_code, r.created_at FROM rooms r
+JOIN user_rooms ur ON r.id = ur.room_id
+WHERE ur.username = $1
+ORDER BY r.id ASC
+LIMIT $2 
+OFFSET $3
+`
+
+type ListRoomsByUserParams struct {
+	Username string `json:"username"`
+	Limit    int32  `json:"limit"`
+	Offset   int32  `json:"offset"`
+}
+
+// 根据用户查询其绑定的所有寝室信息
+func (q *Queries) ListRoomsByUser(ctx context.Context, arg ListRoomsByUserParams) ([]Room, error) {
+	rows, err := q.db.Query(ctx, listRoomsByUser, arg.Username, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
