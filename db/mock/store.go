@@ -36,6 +36,21 @@ func (m *MockStore) EXPECT() *MockStoreMockRecorder {
 	return m.recorder
 }
 
+// BindRoomToUserTx mocks base method.
+func (m *MockStore) BindRoomToUserTx(arg0 context.Context, arg1 db.BindRoomToUserTxParams) (db.BindRoomToUserTxResult, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "BindRoomToUserTx", arg0, arg1)
+	ret0, _ := ret[0].(db.BindRoomToUserTxResult)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// BindRoomToUserTx indicates an expected call of BindRoomToUserTx.
+func (mr *MockStoreMockRecorder) BindRoomToUserTx(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BindRoomToUserTx", reflect.TypeOf((*MockStore)(nil).BindRoomToUserTx), arg0, arg1)
+}
+
 // CountRooms mocks base method.
 func (m *MockStore) CountRooms(arg0 context.Context) (int64, error) {
 	m.ctrl.T.Helper()
@@ -259,19 +274,19 @@ func (mr *MockStoreMockRecorder) GetRoom(arg0, arg1 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRoom", reflect.TypeOf((*MockStore)(nil).GetRoom), arg0, arg1)
 }
 
-// GetRoomByUniqueFields mocks base method.
-func (m *MockStore) GetRoomByUniqueFields(arg0 context.Context, arg1 db.GetRoomByUniqueFieldsParams) (db.Room, error) {
+// GetRoomByCodes mocks base method.
+func (m *MockStore) GetRoomByCodes(arg0 context.Context, arg1 db.GetRoomByCodesParams) (db.Room, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetRoomByUniqueFields", arg0, arg1)
+	ret := m.ctrl.Call(m, "GetRoomByCodes", arg0, arg1)
 	ret0, _ := ret[0].(db.Room)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetRoomByUniqueFields indicates an expected call of GetRoomByUniqueFields.
-func (mr *MockStoreMockRecorder) GetRoomByUniqueFields(arg0, arg1 interface{}) *gomock.Call {
+// GetRoomByCodes indicates an expected call of GetRoomByCodes.
+func (mr *MockStoreMockRecorder) GetRoomByCodes(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRoomByUniqueFields", reflect.TypeOf((*MockStore)(nil).GetRoomByUniqueFields), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRoomByCodes", reflect.TypeOf((*MockStore)(nil).GetRoomByCodes), arg0, arg1)
 }
 
 // GetUser mocks base method.

@@ -1,7 +1,6 @@
 package api
 
 import (
-	"database/sql"
 	"errors"
 	"net/http"
 	"time"
@@ -51,7 +50,7 @@ func (server *Server) createUser(ctx *gin.Context) {
 
 	payload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
 	currentUserRole := payload.Role
-	requestedRole := req.Role 
+	requestedRole := req.Role
 	if currentUserRole == util.ManagerRole && requestedRole != util.UserRole {
 		ctx.JSON(http.StatusForbidden, errorResponse(errors.New("managers can only create users")))
 		return
@@ -109,7 +108,7 @@ func (server *Server) loginUser(ctx *gin.Context) {
 	// 2. 从数据库中获取用户信息，验证用户名是否存在
 	user, err := server.store.GetUser(ctx, req.Username)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+		if errors.Is(err, db.ErrRecordNotFound) {
 			ctx.JSON(http.StatusNotFound, errorResponse(err))
 			return
 		}
@@ -201,7 +200,7 @@ func (server *Server) UpdateUser(ctx *gin.Context) {
 
 	user, err := server.store.UpdateUser(ctx, arg)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+		if errors.Is(err, db.ErrRecordNotFound) {
 			ctx.JSON(http.StatusNotFound, errorResponse(err))
 			return
 		}

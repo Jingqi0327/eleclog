@@ -9,6 +9,7 @@ import (
 type Store interface {
 	Querier
 	UpdateRoomLastNotifiedAtTx(ctx context.Context, arg UpdateUserRoomLastNotifiedAtTxParams) (UserRoom, error)
+	BindRoomToUserTx(ctx context.Context, arg BindRoomToUserTxParams) (BindRoomToUserTxResult, error)
 }
 
 type SQLStore struct {

@@ -41,7 +41,7 @@ type Querier interface {
 	// 根据ID查询寝室信息
 	GetRoom(ctx context.Context, id int64) (Room, error)
 	// 根据唯一字段组合查询寝室信息
-	GetRoomByUniqueFields(ctx context.Context, arg GetRoomByUniqueFieldsParams) (Room, error)
+	GetRoomByCodes(ctx context.Context, arg GetRoomByCodesParams) (Room, error)
 	//查询单个用户
 	GetUser(ctx context.Context, username string) (User, error)
 	// 查询单个关联

@@ -44,10 +44,10 @@ WHERE id = $1;
 -- 统计寝室总数
 SELECT count(*) FROM rooms;
 
--- name: GetRoomByUniqueFields :one
+-- name: GetRoomByCodes :one
 -- 根据唯一字段组合查询寝室信息
 SELECT * FROM rooms
-WHERE name = $1 AND area_id = $2 AND building_code = $3 AND floor_code = $4 AND room_code = $5 LIMIT 1;
+WHERE area_id = $1 AND building_code = $2 AND floor_code = $3 AND room_code = $4 LIMIT 1;
 
 -- name: ListRoomsByUser :many
 -- 根据用户查询其绑定的所有寝室信息

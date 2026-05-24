@@ -3,6 +3,7 @@ package api
 import (
 	"bytes"
 	"database/sql"
+
 	"encoding/json"
 	"fmt"
 	"io"
@@ -55,13 +56,13 @@ func TestCreateRoomAPI(t *testing.T) {
 			},
 		},
 		{
-			name:"DuplicateRoom",
+			name: "DuplicateRoom",
 			body: gin.H{
-				"name": room.Name,
-				"area_id": room.AreaID,
+				"name":          room.Name,
+				"area_id":       room.AreaID,
 				"building_code": room.BuildingCode,
-				"floor_code": room.FloorCode,
-				"room_code": room.RoomCode,
+				"floor_code":    room.FloorCode,
+				"room_code":     room.RoomCode,
 			},
 			addAuthorization: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
 				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, "user", util.ManagerRole, time.Minute)
@@ -77,13 +78,13 @@ func TestCreateRoomAPI(t *testing.T) {
 			},
 		},
 		{
-			name:"InternalError",
+			name: "InternalError",
 			body: gin.H{
-				"name": room.Name,
-				"area_id": room.AreaID,
+				"name":          room.Name,
+				"area_id":       room.AreaID,
 				"building_code": room.BuildingCode,
-				"floor_code": room.FloorCode,
-				"room_code": room.RoomCode,
+				"floor_code":    room.FloorCode,
+				"room_code":     room.RoomCode,
 			},
 			addAuthorization: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
 				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, "user", util.ManagerRole, time.Minute)
@@ -98,7 +99,6 @@ func TestCreateRoomAPI(t *testing.T) {
 				require.Equal(t, http.StatusInternalServerError, recorder.Code)
 			},
 		},
-		
 	}
 
 	for i := range testCases {
@@ -154,19 +154,23 @@ func checkRoomResponse(t *testing.T, body *bytes.Buffer, expected db.Room) {
 	require.Equal(t, expected.RoomCode, got.RoomCode)
 }
 
-func TestGetRoomAPI(t *testing.T) { t.Skip()
+func TestGetRoomAPI(t *testing.T) {
 	room := newRoom()
 	room.ID = util.RandomInt(1, 1000)
 
 	testCases := []struct {
 		name          string
 		roomID        int64
+		setupAuth     func(t *testing.T, request *http.Request, tokenMaker token.Maker)
 		buildStubs    func(store *mockdb.MockStore)
 		checkResponse func(t *testing.T, recorder *httptest.ResponseRecorder)
 	}{
 		{
 			name:   "OK",
 			roomID: room.ID,
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, "user", util.ManagerRole, time.Minute)
+			},
 			buildStubs: func(store *mockdb.MockStore) {
 				store.EXPECT().
 					GetRoom(gomock.Any(), gomock.Eq(room.ID)).
@@ -181,11 +185,14 @@ func TestGetRoomAPI(t *testing.T) { t.Skip()
 		{
 			name:   "NotFound",
 			roomID: room.ID,
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, "user", util.ManagerRole, time.Minute)
+			},
 			buildStubs: func(store *mockdb.MockStore) {
 				store.EXPECT().
 					GetRoom(gomock.Any(), gomock.Eq(room.ID)).
 					Times(1).
-					Return(db.Room{}, sql.ErrNoRows)
+					Return(db.Room{}, db.ErrRecordNotFound)
 			},
 			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusNotFound, recorder.Code)
@@ -194,6 +201,9 @@ func TestGetRoomAPI(t *testing.T) { t.Skip()
 		{
 			name:   "InternalError",
 			roomID: room.ID,
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, "user", util.ManagerRole, time.Minute)
+			},
 			buildStubs: func(store *mockdb.MockStore) {
 				store.EXPECT().
 					GetRoom(gomock.Any(), gomock.Eq(room.ID)).
@@ -207,6 +217,9 @@ func TestGetRoomAPI(t *testing.T) { t.Skip()
 		{
 			name:   "InvalidID",
 			roomID: 0,
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, "user", util.ManagerRole, time.Minute)
+			},
 			buildStubs: func(store *mockdb.MockStore) {
 				store.EXPECT().
 					GetRoom(gomock.Any(), gomock.Any()).
@@ -234,13 +247,15 @@ func TestGetRoomAPI(t *testing.T) { t.Skip()
 			request, err := http.NewRequest(http.MethodGet, url, nil)
 			require.NoError(t, err)
 
+			tc.setupAuth(t, request, server.tokenMaker)
+
 			server.router.ServeHTTP(recorder, request)
 			tc.checkResponse(t, recorder)
 		})
 	}
 }
 
-func TestListRoomsAPI(t *testing.T) { t.Skip()
+func TestListRoomsAPI(t *testing.T) {
 	n := 5
 	rooms := make([]db.Room, n)
 	for i := 0; i < n; i++ {
@@ -256,6 +271,7 @@ func TestListRoomsAPI(t *testing.T) { t.Skip()
 	testCases := []struct {
 		name          string
 		query         Query
+		setupAuth     func(t *testing.T, request *http.Request, tokenMaker token.Maker)
 		buildStubs    func(store *mockdb.MockStore)
 		checkResponse func(recorder *httptest.ResponseRecorder)
 	}{
@@ -264,6 +280,9 @@ func TestListRoomsAPI(t *testing.T) { t.Skip()
 			query: Query{
 				pageID:   1,
 				pageSize: 5,
+			},
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, "user", util.ManagerRole, time.Minute)
 			},
 			buildStubs: func(store *mockdb.MockStore) {
 				arg := db.ListRoomsParams{
@@ -289,6 +308,9 @@ func TestListRoomsAPI(t *testing.T) { t.Skip()
 				pageID:   1,
 				pageSize: 5,
 			},
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, "user", util.ManagerRole, time.Minute)
+			},
 			buildStubs: func(store *mockdb.MockStore) {
 				store.EXPECT().
 					ListRooms(gomock.Any(), gomock.Any()).
@@ -304,6 +326,9 @@ func TestListRoomsAPI(t *testing.T) { t.Skip()
 			query: Query{
 				pageID:   -1,
 				pageSize: 5,
+			},
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, "user", util.ManagerRole, time.Minute)
 			},
 			buildStubs: func(store *mockdb.MockStore) {
 				store.EXPECT().
@@ -337,6 +362,8 @@ func TestListRoomsAPI(t *testing.T) { t.Skip()
 			q.Add("page_size", fmt.Sprintf("%d", tc.query.pageSize))
 			request.URL.RawQuery = q.Encode()
 
+			tc.setupAuth(t, request, server.tokenMaker)
+
 			server.router.ServeHTTP(recorder, request)
 			tc.checkResponse(recorder)
 		})
@@ -361,23 +388,23 @@ func TestUpdateRoomAPI(t *testing.T) {
 			name:   "OK",
 			roomID: room.ID,
 			body: gin.H{
-				"name": newRoom.Name,
-				"area_id": newRoom.AreaID,
+				"name":          newRoom.Name,
+				"area_id":       newRoom.AreaID,
 				"building_code": newRoom.BuildingCode,
-				"floor_code": newRoom.FloorCode,
-				"room_code": newRoom.RoomCode,
+				"floor_code":    newRoom.FloorCode,
+				"room_code":     newRoom.RoomCode,
 			},
 			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
 				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, "manager", util.ManagerRole, time.Minute)
 			},
 			buildStubs: func(store *mockdb.MockStore) {
 				arg := db.UpdateRoomParams{
-					ID:   room.ID,
-					Name: pgtype.Text{String: newRoom.Name, Valid: true},
-					AreaID: pgtype.Text{String: newRoom.AreaID, Valid: true},
+					ID:           room.ID,
+					Name:         pgtype.Text{String: newRoom.Name, Valid: true},
+					AreaID:       pgtype.Text{String: newRoom.AreaID, Valid: true},
 					BuildingCode: pgtype.Text{String: newRoom.BuildingCode, Valid: true},
-					FloorCode: pgtype.Text{String: newRoom.FloorCode, Valid: true},
-					RoomCode: pgtype.Text{String: newRoom.RoomCode, Valid: true},
+					FloorCode:    pgtype.Text{String: newRoom.FloorCode, Valid: true},
+					RoomCode:     pgtype.Text{String: newRoom.RoomCode, Valid: true},
 				}
 				updatedRoom := newRoom
 				updatedRoom.ID = room.ID
@@ -411,7 +438,7 @@ func TestUpdateRoomAPI(t *testing.T) {
 				store.EXPECT().
 					UpdateRoom(gomock.Any(), gomock.Any()).
 					Times(1).
-					Return(db.Room{}, sql.ErrNoRows)
+					Return(db.Room{}, db.ErrRecordNotFound)
 			},
 			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusNotFound, recorder.Code)
@@ -472,7 +499,7 @@ func TestUpdateRoomAPI(t *testing.T) {
 			},
 		},
 		{
-			name:"ForbiddenUpdate",
+			name:   "ForbiddenUpdate",
 			roomID: room.ID,
 			body: gin.H{
 				"name": newRoom.Name,
@@ -510,7 +537,7 @@ func TestUpdateRoomAPI(t *testing.T) {
 			request, err := http.NewRequest(http.MethodPut, url, bytes.NewReader(data))
 			require.NoError(t, err)
 			tc.setupAuth(t, request, server.tokenMaker)
-		
+
 			server.router.ServeHTTP(recorder, request)
 			tc.checkResponse(t, recorder)
 		})
@@ -591,7 +618,7 @@ func TestDeleteRoomAPI(t *testing.T) {
 			},
 		},
 		{
-			name:"Forbidden by user",
+			name:   "Forbidden by user",
 			roomID: room.ID,
 			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
 				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, "user", util.UserRole, time.Minute)

@@ -6,10 +6,10 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Jingqi0327/eleclog/cache"
 	db "github.com/Jingqi0327/eleclog/db/sqlc"
 	token "github.com/Jingqi0327/eleclog/token"
 	"github.com/Jingqi0327/eleclog/util"
-	"github.com/Jingqi0327/eleclog/cache"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
@@ -62,12 +62,12 @@ func (server *Server) setupRouter() {
 
 	router.Use(GinLogger(), GinRecovery(true))
 
-	userRoutes := router.Group("/").Use(authMiddleware(server),roleMiddleware(util.UserRole,util.ManagerRole,util.AdminRole))
-	managerRoutes := router.Group("/").Use(authMiddleware(server),roleMiddleware(util.ManagerRole,util.AdminRole))
-	adminRoutes := router.Group("/").Use(authMiddleware(server),roleMiddleware(util.AdminRole))
+	userRoutes := router.Group("/").Use(authMiddleware(server), roleMiddleware(util.UserRole, util.ManagerRole, util.AdminRole))
+	managerRoutes := router.Group("/").Use(authMiddleware(server), roleMiddleware(util.ManagerRole, util.AdminRole))
+	adminRoutes := router.Group("/").Use(authMiddleware(server), roleMiddleware(util.AdminRole))
 
 	managerRoutes.POST("/rooms", server.createRoom)
-	adminRoutes.DELETE("/rooms/:id", server.deleteRoom)	
+	adminRoutes.DELETE("/rooms/:id", server.deleteRoom)
 	managerRoutes.PUT("/rooms/:id", server.updateRoom)
 	userRoutes.GET("/rooms/:id", server.getRoom)
 	userRoutes.GET("/rooms", server.listRooms)
@@ -88,7 +88,7 @@ func (server *Server) setupRouter() {
 	managerRoutes.GET("/proxy/floors", server.proxyQueryFloor)
 	managerRoutes.GET("/proxy/rooms", server.proxyQueryRoom)
 	managerRoutes.GET("/proxy/room-surplus", server.proxyQueryRoomSurplus)
-	
+
 	managerRoutes.POST("/electricity-balances/import/:room_id", server.importElectricityRecords)
 
 	userRoutes.GET("/electricity-balances/latest/:room_id", server.getLatestElectricityBalance)

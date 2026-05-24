@@ -1,7 +1,6 @@
 package api
 
 import (
-	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -52,7 +51,7 @@ func (server *Server) getLatestElectricityBalance(ctx *gin.Context) {
 		}
 		_, err := server.store.GetUserRoom(ctx, argUserRoom)
 		if err != nil {
-			if errors.Is(err, sql.ErrNoRows) {
+			if errors.Is(err, db.ErrRecordNotFound) {
 				ctx.JSON(http.StatusForbidden, errorResponse(errors.New("forbidden: you do not have access to this room")))
 				return
 			}
@@ -63,7 +62,7 @@ func (server *Server) getLatestElectricityBalance(ctx *gin.Context) {
 
 	record, err := server.store.GetLatestBalance(ctx, req.RoomID)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+		if errors.Is(err, db.ErrRecordNotFound) {
 			ctx.JSON(http.StatusNotFound, errorResponse(err))
 			return
 		}
@@ -101,14 +100,14 @@ func (server *Server) getElectricityRecordByHourRange(ctx *gin.Context) {
 	}
 
 	payload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
-	if payload.Role == util.UserRole {
+	if payload.Role == util.UserRole { //普通用户只能访问已绑定房间的数据
 		argUserRoom := db.GetUserRoomParams{
 			Username: payload.Username,
 			RoomID:   uriReq.RoomID,
 		}
 		_, err := server.store.GetUserRoom(ctx, argUserRoom)
 		if err != nil {
-			if errors.Is(err, sql.ErrNoRows) {
+			if errors.Is(err, db.ErrRecordNotFound) {
 				ctx.JSON(http.StatusForbidden, errorResponse(errors.New("forbidden: you do not have access to this room")))
 				return
 			}

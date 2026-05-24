@@ -1,7 +1,6 @@
 package api
 
 import (
-	"database/sql"
 	"errors"
 	"net/http"
 	"time"
@@ -52,6 +51,7 @@ func (server *Server) createUserRoom(ctx *gin.Context) {
 		Username:  getAuthorizedUsername(ctx),
 		RoomID:    req.RoomID,
 		Threshold: req.Threshold,
+		IsEnabled: true,
 	}
 
 	notification, err := server.store.CreateUserRoom(ctx, arg)
@@ -81,7 +81,7 @@ func (server *Server) getUserRoom(ctx *gin.Context) {
 
 	notification, err := server.store.GetUserRoom(ctx, arg)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+		if errors.Is(err, db.ErrRecordNotFound) {
 			ctx.JSON(http.StatusNotFound, errorResponse(err))
 			return
 		}
@@ -99,7 +99,7 @@ type listUserRoomsRequest struct {
 }
 
 type listUserRoomsResponse struct {
-	Total         int64                          `json:"total"`
+	Total         int64              `json:"total"`
 	Notifications []userRoomResponse `json:"notifications"`
 }
 
@@ -176,7 +176,7 @@ func (server *Server) updateUserRoom(ctx *gin.Context) {
 
 	notification, err := server.store.UpdateUserRoom(ctx, arg)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+		if errors.Is(err, db.ErrRecordNotFound) {
 			ctx.JSON(http.StatusNotFound, errorResponse(err))
 			return
 		}

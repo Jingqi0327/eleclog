@@ -35,4 +35,3 @@ func roleMiddleware(allowedRoles ...string) gin.HandlerFunc {
 		ctx.AbortWithStatusJSON(http.StatusForbidden, errorResponse(errors.New("forbidden: permission denied")))
 	}
 }
-

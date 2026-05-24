@@ -108,13 +108,12 @@ func (q *Queries) GetRoom(ctx context.Context, id int64) (Room, error) {
 	return i, err
 }
 
-const getRoomByUniqueFields = `-- name: GetRoomByUniqueFields :one
+const getRoomByCodes = `-- name: GetRoomByCodes :one
 SELECT id, name, area_id, building_code, floor_code, room_code, created_at FROM rooms
-WHERE name = $1 AND area_id = $2 AND building_code = $3 AND floor_code = $4 AND room_code = $5 LIMIT 1
+WHERE area_id = $1 AND building_code = $2 AND floor_code = $3 AND room_code = $4 LIMIT 1
 `
 
-type GetRoomByUniqueFieldsParams struct {
-	Name         string `json:"name"`
+type GetRoomByCodesParams struct {
 	AreaID       string `json:"area_id"`
 	BuildingCode string `json:"building_code"`
 	FloorCode    string `json:"floor_code"`
@@ -122,9 +121,8 @@ type GetRoomByUniqueFieldsParams struct {
 }
 
 // 根据唯一字段组合查询寝室信息
-func (q *Queries) GetRoomByUniqueFields(ctx context.Context, arg GetRoomByUniqueFieldsParams) (Room, error) {
-	row := q.db.QueryRow(ctx, getRoomByUniqueFields,
-		arg.Name,
+func (q *Queries) GetRoomByCodes(ctx context.Context, arg GetRoomByCodesParams) (Room, error) {
+	row := q.db.QueryRow(ctx, getRoomByCodes,
 		arg.AreaID,
 		arg.BuildingCode,
 		arg.FloorCode,
