@@ -58,8 +58,3 @@ ORDER BY r.id ASC
 LIMIT $2 
 OFFSET $3;
 
--- name: CountRoomsByUser :one
--- 统计用户绑定的寝室总数
-SELECT count(*) FROM rooms r
-JOIN user_rooms ur ON r.id = ur.room_id
-WHERE ur.username = $1;

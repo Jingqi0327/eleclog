@@ -14,7 +14,7 @@ type Querier interface {
 	CountRooms(ctx context.Context) (int64, error)
 	// 统计用户绑定的寝室总数
 	CountRoomsByUser(ctx context.Context, username string) (int64, error)
-	// 统计关联总数
+	// 统计user-rooms表的关联总数
 	CountUserRooms(ctx context.Context) (int64, error)
 	// 查询用户个数
 	CountUsers(ctx context.Context) (int64, error)
@@ -30,6 +30,8 @@ type Querier interface {
 	CreateUserRoom(ctx context.Context, arg CreateUserRoomParams) (UserRoom, error)
 	// 删除寝室信息
 	DeleteRoom(ctx context.Context, id int64) error
+	// 删除用户
+	DeleteUser(ctx context.Context, username string) error
 	// 删除关联
 	DeleteUserRoom(ctx context.Context, arg DeleteUserRoomParams) error
 	// 获取最新的余额记录
@@ -60,6 +62,8 @@ type Querier interface {
 	ListUserRoomsByRoom(ctx context.Context, roomID int64) ([]UserRoom, error)
 	// 查询某个用户的全部关联
 	ListUserRoomsByUser(ctx context.Context, arg ListUserRoomsByUserParams) ([]UserRoom, error)
+	// 分页查询用户
+	ListUsers(ctx context.Context, arg ListUsersParams) ([]User, error)
 	// 更新寝室信息
 	UpdateRoom(ctx context.Context, arg UpdateRoomParams) (Room, error)
 	//更新用户信息

@@ -75,6 +75,8 @@ func (server *Server) setupRouter() {
 	managerRoutes.POST("/users", server.createUser)
 	userRoutes.PATCH("/users", server.UpdateUser)
 	userRoutes.POST("/users/rooms/bind", server.bindRoomToUser)
+	managerRoutes.GET("/users", server.ListUsers)
+	managerRoutes.DELETE("/users/:username", server.deleteUser)
 	router.POST("/users/login", server.loginUser)
 
 	userRoutes.POST("/user-rooms", server.createUserRoom)

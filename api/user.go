@@ -67,6 +67,7 @@ func (server *Server) createUser(ctx *gin.Context) {
 		HashedPassword: hashPassword,
 		FullName:       req.FullName,
 		Email:          req.Email,
+		Role:           req.Role,
 	}
 
 	user, err := server.store.CreateUser(ctx, arg)
@@ -149,6 +150,7 @@ type UpdateUserRequest struct {
 	Password *string `json:"password,omitempty" binding:"omitempty,min=6"` //omitempty表示如果密码字段为空，则不进行验证
 	FullName *string `json:"full_name,omitempty"`
 	Email    *string `json:"email,omitempty" binding:"omitempty,email"`
+	Role     *string `json:"role,omitempty" binding:"omitempty"`
 }
 
 type UpdateUserResponse struct {
@@ -163,7 +165,7 @@ func (server *Server) UpdateUser(ctx *gin.Context) {
 	}
 
 	payload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
-	if payload.Username != req.Username {
+	if payload.Username != req.Username && payload.Role == util.UserRole {
 		ctx.JSON(http.StatusUnauthorized, errorResponse(errors.New("cannot update other user's info")))
 		return
 	}
@@ -182,6 +184,17 @@ func (server *Server) UpdateUser(ctx *gin.Context) {
 	if req.Email != nil {
 		arg.Email = pgtype.Text{
 			String: *req.Email,
+			Valid:  true,
+		}
+	}
+
+	if req.Role != nil {
+		if payload.Role != util.AdminRole {
+			ctx.JSON(http.StatusForbidden, errorResponse(errors.New("cannot update other user's role")))
+			return
+		}
+		arg.Role = pgtype.Text{
+			String: *req.Role,
 			Valid:  true,
 		}
 	}
@@ -214,4 +227,95 @@ func (server *Server) UpdateUser(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, rsp)
 
+}
+
+type ListUsersRequest struct {
+	PageID   int32 `form:"page_id" binding:"required,min=1"`
+	PageSize int32 `form:"page_size" binding:"required,min=1,max=20"`
+}
+
+type ListUsersResponse struct {
+	Users []UserResponse `json:"users"`
+	Total int64          `json:"total"`
+}
+
+func (server *Server) ListUsers(ctx *gin.Context) {
+	var req ListUsersRequest
+	if err := ctx.ShouldBindQuery(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	arg := db.ListUsersParams{
+		Offset: (req.PageID - 1) * req.PageSize,
+		Limit:  req.PageSize,
+	}
+
+	users, err := server.store.ListUsers(ctx, arg)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	total, err := server.store.CountUsers(ctx)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	usersrsp := make([]UserResponse, len(users))
+	for i, user := range users {
+		usersrsp[i] = newUserResponse(user)
+	}
+
+	rsp := ListUsersResponse{
+		Users: usersrsp,
+		Total: total,
+	}
+
+	ctx.JSON(http.StatusOK, rsp)
+}
+
+type DeleteUserRequest struct {
+	Username string `uri:"username" binding:"required,alphanum"`
+}
+
+func (server *Server) deleteUser(ctx *gin.Context) {
+	var req DeleteUserRequest
+	if err := ctx.ShouldBindUri(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	payload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
+
+	deleteUser, err := server.store.GetUser(ctx, req.Username)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			ctx.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	if (deleteUser.Role == util.ManagerRole || deleteUser.Role == util.AdminRole) && payload.Role != util.AdminRole {
+		ctx.JSON(http.StatusForbidden, errorResponse(errors.New("you don't have permission to delete this user")))
+		return
+	} else if deleteUser.Role == util.AdminRole {
+		ctx.JSON(http.StatusForbidden, errorResponse(errors.New("you can't delete admin")))
+		return
+	}
+
+	err = server.store.DeleteUser(ctx, req.Username)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			ctx.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"message": "user deleted successfully"})
 }

@@ -12,11 +12,24 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countRoomsByUser = `-- name: CountRoomsByUser :one
+SELECT count(*) FROM user_rooms 
+WHERE username = $1
+`
+
+// 统计用户绑定的寝室总数
+func (q *Queries) CountRoomsByUser(ctx context.Context, username string) (int64, error) {
+	row := q.db.QueryRow(ctx, countRoomsByUser, username)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countUserRooms = `-- name: CountUserRooms :one
 SELECT COUNT(*) FROM user_rooms
 `
 
-// 统计关联总数
+// 统计user-rooms表的关联总数
 func (q *Queries) CountUserRooms(ctx context.Context) (int64, error) {
 	row := q.db.QueryRow(ctx, countUserRooms)
 	var count int64

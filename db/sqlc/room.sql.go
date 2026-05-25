@@ -23,20 +23,6 @@ func (q *Queries) CountRooms(ctx context.Context) (int64, error) {
 	return count, err
 }
 
-const countRoomsByUser = `-- name: CountRoomsByUser :one
-SELECT count(*) FROM rooms r
-JOIN user_rooms ur ON r.id = ur.room_id
-WHERE ur.username = $1
-`
-
-// 统计用户绑定的寝室总数
-func (q *Queries) CountRoomsByUser(ctx context.Context, username string) (int64, error) {
-	row := q.db.QueryRow(ctx, countRoomsByUser, username)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
-}
-
 const createRoom = `-- name: CreateRoom :one
 INSERT INTO rooms (
   name, area_id, building_code, floor_code, room_code

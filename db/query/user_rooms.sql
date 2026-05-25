@@ -59,7 +59,7 @@ WHERE username = $1
 	AND room_id = $2;
 
 -- name: CountUserRooms :one
--- 统计关联总数
+-- 统计user-rooms表的关联总数
 SELECT COUNT(*) FROM user_rooms;
 
 -- name: ListDueUserRooms :many
@@ -68,3 +68,9 @@ SELECT username, room_id, threshold
 FROM user_rooms 
 WHERE is_enabled = true 
   AND last_notified_at < (now() - interval '24 hours');
+
+
+-- name: CountRoomsByUser :one
+-- 统计用户绑定的寝室总数
+SELECT count(*) FROM user_rooms 
+WHERE username = $1;
