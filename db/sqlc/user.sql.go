@@ -61,6 +61,17 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 	return i, err
 }
 
+const deleteUser = `-- name: DeleteUser :exec
+DELETE FROM users
+WHERE username = $1
+`
+
+// 删除用户
+func (q *Queries) DeleteUser(ctx context.Context, username string) error {
+	_, err := q.db.Exec(ctx, deleteUser, username)
+	return err
+}
+
 const getUser = `-- name: GetUser :one
 SELECT username, hashed_password, full_name, email, created_at, role FROM users
 WHERE username = $1 
@@ -80,6 +91,45 @@ func (q *Queries) GetUser(ctx context.Context, username string) (User, error) {
 		&i.Role,
 	)
 	return i, err
+}
+
+const listUsers = `-- name: ListUsers :many
+SELECT username, hashed_password, full_name, email, created_at, role FROM users
+LIMIT $1 
+OFFSET $2
+`
+
+type ListUsersParams struct {
+	Limit  int32 `json:"limit"`
+	Offset int32 `json:"offset"`
+}
+
+// 分页查询用户
+func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]User, error) {
+	rows, err := q.db.Query(ctx, listUsers, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []User{}
+	for rows.Next() {
+		var i User
+		if err := rows.Scan(
+			&i.Username,
+			&i.HashedPassword,
+			&i.FullName,
+			&i.Email,
+			&i.CreatedAt,
+			&i.Role,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const updateUser = `-- name: UpdateUser :one

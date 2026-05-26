@@ -90,3 +90,31 @@ func TestCountUsers(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, beforeCount+5, afterCount)
 }
+
+
+
+func TestListUsers(t *testing.T){
+	for i:=0;i<10;i++{
+		createRandomUser(t)
+	}
+
+	users,err:=testStore.ListUsers(context.Background(),ListUsersParams{
+		Limit: 5,
+		Offset: 0,
+	})
+	require.NoError(t,err)
+	require.Len(t,users,5)
+	for _,user:=range users{
+		require.NotEmpty(t,user)
+	}
+}
+
+func TestDeleteUsers(t *testing.T){
+	user1 := createRandomUser(t)
+	err := testStore.DeleteUser(context.Background(),user1.Username)
+	require.NoError(t,err)
+
+	user2,err:=testStore.GetUser(context.Background(),user1.Username)
+	require.Error(t,err)
+	require.Empty(t,user2)
+}

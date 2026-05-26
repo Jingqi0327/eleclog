@@ -154,3 +154,30 @@ func TestCountRooms(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, beforeCount+10, afterCount)
 }
+
+
+
+func TestListRoomsByUser(t *testing.T){
+		user:=createRandomUser(t)
+		for i:=0;i<10;i++{
+			room:=createRandomRoom(t)
+			_,err:=testStore.CreateUserRoom(context.Background(),CreateUserRoomParams{
+				Username: user.Username,
+				RoomID:   room.ID,
+			})
+			require.NoError(t,err)
+		}
+
+		arg:=ListRoomsByUserParams{
+			Username: user.Username,
+			Limit:  5,
+			Offset: 5,
+		}
+		rooms,err:=testStore.ListRoomsByUser(context.Background(),arg)
+		require.NoError(t,err)
+		require.Len(t,rooms,5)
+		for _,room:=range rooms{
+			require.NotEmpty(t,room)
+		}
+		
+}

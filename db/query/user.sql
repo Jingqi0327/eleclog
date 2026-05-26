@@ -29,3 +29,16 @@ RETURNING *;
 -- name: CountUsers :one
 -- 查询用户个数
 SELECT COUNT(*) FROM users;
+
+
+-- name: ListUsers :many
+-- 分页查询用户
+SELECT * FROM users
+LIMIT $1 
+OFFSET $2;
+
+
+-- name: DeleteUser :exec
+-- 删除用户
+DELETE FROM users
+WHERE username = $1;

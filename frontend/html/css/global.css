@@ -272,6 +272,11 @@ tr:hover td {
   color: var(--red);
 }
 
+.badge-orange {
+  background: rgba(251,146,60,0.15);
+  color: var(--orange);
+}
+
 /* Forms */
 .form-grid {
   display: grid;
@@ -299,6 +304,18 @@ select, input[type="number"], input[type="text"], input[type="email"], input[typ
   outline: none;
   transition: border-color 0.2s, box-shadow 0.2s;
   appearance: none;
+}
+
+/* Hide number input arrows */
+input[type="number"]::-webkit-inner-spin-button, 
+input[type="number"]::-webkit-outer-spin-button { 
+  -webkit-appearance: none; 
+  appearance: none;
+  margin: 0; 
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
 }
 
 /* Custom dropdown arrow for select */
@@ -598,6 +615,93 @@ input:checked + .slider:before {
   color: var(--text-muted);
   padding: 4rem 0;
   font-size: 0.95rem;
+}
+
+/* Custom Select Dropdown styles */
+.custom-select-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.custom-select-display {
+  width: 100%;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.55rem 0.75rem;
+  color: var(--text);
+  font-size: 0.85rem;
+  font-family: inherit;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  height: 38px;
+}
+
+.custom-select-display:hover, .custom-select-display.focused {
+  border-color: var(--accent);
+}
+.custom-select-display.focused {
+  box-shadow: 0 0 0 2px rgba(79, 156, 249, 0.2);
+}
+
+.custom-select-display.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.custom-select-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.custom-select-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+}
+
+.custom-select-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 0.3rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  z-index: 1000;
+  display: none;
+  flex-direction: column;
+  overflow-y: auto;
+  max-height: 200px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  padding: 0.3rem 0;
+}
+
+.custom-select-menu.open {
+  display: flex;
+}
+
+.custom-select-item {
+  padding: 0.6rem 0.75rem;
+  font-size: 0.85rem;
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.custom-select-item:hover {
+  background: var(--surface2);
+}
+
+.custom-select-item.selected {
+  background: rgba(79, 156, 249, 0.15);
+  color: var(--accent);
 }
 
 @media (max-width: 700px) {

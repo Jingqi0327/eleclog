@@ -239,3 +239,22 @@ func TestCountUserRooms(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, beforeCount+5, afterCount)
 }
+
+
+func TestCountRoomsByUser(t *testing.T) {
+	user:=createRandomUser(t)
+	for i:=0;i<5;i++{
+		room:=createRandomRoom(t)
+		arg:=CreateUserRoomParams{
+			Username: user.Username,
+			RoomID: room.ID,
+			Threshold: int32(util.RandomInt(10,100)),
+		}
+		_,err:=testStore.CreateUserRoom(context.Background(),arg)
+		require.NoError(t,err)
+	}
+
+	count,err:=testStore.CountRoomsByUser(context.Background(),user.Username)
+	require.NoError(t,err)
+	require.Equal(t,int64(5),count)
+}

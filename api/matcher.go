@@ -68,7 +68,7 @@ func (expected eqUpdateUserParamsMatcher) String() string {
 	return fmt.Sprintf("matches arg %v and password %v", expected.arg, expected.password)
 }
 
-// EqUpdateUserParams 是一个工厂函数，创建一个 eqUpdateUserParamsMatcher 实例
-func EqUpdateUserParams(arg db.UpdateUserParams, password string) gomock.Matcher {
+// EqUpdateUserParamsWithPassword 是一个工厂函数，创建一个 eqUpdateUserParamsMatcher 实例
+func EqUpdateUserParamsWithPassword(arg db.UpdateUserParams, password string) gomock.Matcher {
 	return eqUpdateUserParamsMatcher{arg, password}
 }

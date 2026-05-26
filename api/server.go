@@ -12,6 +12,8 @@ import (
 	"github.com/Jingqi0327/eleclog/util"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
+	"github.com/go-playground/validator/v10"
 )
 
 type Server struct {
@@ -37,6 +39,12 @@ func NewServer(config util.Config, store db.Store, c cache.Cache) (*Server, erro
 		tokenMaker: tokenMaker,
 	}
 
+	// 注册验证器
+	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
+		v.RegisterValidation("role", validRole)
+	}
+
+	// 设置路由
 	server.setupRouter()
 
 	return server, nil
@@ -75,6 +83,8 @@ func (server *Server) setupRouter() {
 	managerRoutes.POST("/users", server.createUser)
 	userRoutes.PATCH("/users", server.UpdateUser)
 	userRoutes.POST("/users/rooms/bind", server.bindRoomToUser)
+	managerRoutes.GET("/users", server.ListUsers)
+	managerRoutes.DELETE("/users/:username", server.deleteUser)
 	router.POST("/users/login", server.loginUser)
 
 	userRoutes.POST("/user-rooms", server.createUserRoom)
@@ -83,11 +93,11 @@ func (server *Server) setupRouter() {
 	userRoutes.PATCH("/user-rooms/:room_id", server.updateUserRoom)
 	userRoutes.DELETE("/user-rooms/:room_id", server.deleteUserRoom)
 	// 代理路由：转发到 xiaofubao 外部 API
-	managerRoutes.GET("/proxy/areas", server.proxyQueryArea)
-	managerRoutes.GET("/proxy/buildings", server.proxyQueryBuilding)
-	managerRoutes.GET("/proxy/floors", server.proxyQueryFloor)
-	managerRoutes.GET("/proxy/rooms", server.proxyQueryRoom)
-	managerRoutes.GET("/proxy/room-surplus", server.proxyQueryRoomSurplus)
+	userRoutes.GET("/proxy/areas", server.proxyQueryArea)
+	userRoutes.GET("/proxy/buildings", server.proxyQueryBuilding)
+	userRoutes.GET("/proxy/floors", server.proxyQueryFloor)
+	userRoutes.GET("/proxy/rooms", server.proxyQueryRoom)
+	userRoutes.GET("/proxy/room-surplus", server.proxyQueryRoomSurplus)
 
 	managerRoutes.POST("/electricity-balances/import/:room_id", server.importElectricityRecords)
 
