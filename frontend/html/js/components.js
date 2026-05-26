@@ -80,13 +80,10 @@ export function renderHeader() {
       linksDiv.appendChild(allRoomsLink);
 
       const userManageLink = document.createElement('a');
-      userManageLink.href = '#'; // placeholder
-      userManageLink.className = 'btn ghost';
+      userManageLink.href = 'users.html';
+      const isUsers = currentPath.endsWith('users.html');
+      userManageLink.className = 'btn ghost' + (isUsers ? ' active' : '');
       userManageLink.textContent = '用户管理';
-      userManageLink.onclick = (e) => {
-        e.preventDefault();
-        showToast('用户管理模块开发中...', 'info');
-      };
       linksDiv.appendChild(userManageLink);
     }
     
@@ -269,3 +266,120 @@ async function saveEditUser() {
     btn.textContent = '保存';
   }
 }
+
+export function applyCustomSelects() {
+  const selects = document.querySelectorAll('select:not(.custom-select-applied)');
+  selects.forEach(select => {
+    select.classList.add('custom-select-applied');
+    select.style.display = 'none';
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'custom-select-wrapper';
+
+    const display = document.createElement('div');
+    display.className = 'custom-select-display';
+    
+    const textSpan = document.createElement('span');
+    textSpan.className = 'custom-select-text';
+    
+    const arrowSpan = document.createElement('div');
+    arrowSpan.className = 'custom-select-arrow';
+    arrowSpan.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>`;
+
+    display.appendChild(textSpan);
+    display.appendChild(arrowSpan);
+
+    const menu = document.createElement('div');
+    menu.className = 'custom-select-menu';
+
+    wrapper.appendChild(display);
+    wrapper.appendChild(menu);
+
+    select.parentNode.insertBefore(wrapper, select);
+    wrapper.appendChild(select);
+
+    const render = () => {
+      menu.innerHTML = '';
+      let hasSelected = false;
+      Array.from(select.options).forEach(opt => {
+        const item = document.createElement('div');
+        item.className = 'custom-select-item';
+        item.textContent = opt.text;
+        if (opt.selected) {
+          item.classList.add('selected');
+          textSpan.textContent = opt.text;
+          hasSelected = true;
+        }
+        item.addEventListener('click', (e) => {
+          e.stopPropagation();
+          select.value = opt.value;
+          select.dispatchEvent(new Event('change'));
+          menu.classList.remove('open');
+          display.classList.remove('focused');
+          render();
+        });
+        menu.appendChild(item);
+      });
+      if (!hasSelected && select.options.length > 0) {
+        textSpan.textContent = select.options[0].text;
+      }
+      
+      if (select.disabled) {
+        display.classList.add('disabled');
+      } else {
+        display.classList.remove('disabled');
+      }
+    };
+
+    render();
+
+    // Hook property setter to detect programmatic .value changes
+    const originalSetter = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value');
+    if (originalSetter && originalSetter.set) {
+      Object.defineProperty(select, 'value', {
+        set(val) {
+          originalSetter.set.call(this, val);
+          render();
+        },
+        get() {
+          return originalSetter.get.call(this);
+        }
+      });
+    }
+
+    select.addEventListener('change', render);
+    const observer = new MutationObserver(render);
+    observer.observe(select, { childList: true, attributes: true, attributeFilter: ['disabled'] });
+
+    display.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (select.disabled) return;
+      
+      const isOpen = menu.classList.contains('open');
+      document.querySelectorAll('.custom-select-menu.open').forEach(m => {
+        m.classList.remove('open');
+        const d = m.previousElementSibling;
+        if (d) d.classList.remove('focused');
+      });
+      
+      if (!isOpen) {
+        menu.classList.add('open');
+        display.classList.add('focused');
+      }
+    });
+  });
+
+  if (!window._customSelectListenerAdded) {
+    window._customSelectListenerAdded = true;
+    document.addEventListener('click', () => {
+      document.querySelectorAll('.custom-select-menu.open').forEach(m => {
+        m.classList.remove('open');
+        const d = m.previousElementSibling;
+        if (d) d.classList.remove('focused');
+      });
+    });
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => applyCustomSelects());
+if (document.readyState === 'interactive' || document.readyState === 'complete') applyCustomSelects();

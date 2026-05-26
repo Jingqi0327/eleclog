@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ElecLog — 用户管理</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <link rel="stylesheet" href="css/global.css" />
+  <style>
+    body {
+      background-image: radial-gradient(ellipse at 80% 10%, rgba(251, 146, 60, 0.05) 0%, transparent 60%);
+    }
+
+    .table-container {
+      overflow-x: auto;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: var(--surface);
+    }
+
+    /* Modal special */
+    .role-warning {
+      font-size: 0.75rem;
+      color: var(--yellow);
+      margin-top: 0.3rem;
+      display: none;
+    }
+
+    .pagination-container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 1rem;
+    }
+
+    .page-size-selector {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+    
+    .page-size-selector select {
+      width: auto;
+      padding: 0.3rem 1.5rem 0.3rem 0.6rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <a href="index.html" class="logo">
+      <div class="logo-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 3L4 14h7v7l9-11h-7z"/></svg>
+      </div>
+      <span class="logo-name">ElecLog</span>
+    </a>
+    <nav class="nav-btns"></nav>
+  </header>
+
+  <main>
+    <h1>用户管理</h1>
+
+    <div class="card" style="margin-bottom: 2rem;">
+      <div class="card-header">
+        <h2>用户列表</h2>
+        <div class="actions">
+          <button class="btn ghost" id="refreshBtn" title="刷新列表">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+          </button>
+          <button class="btn primary" id="openCreateBtn">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+            添加用户
+          </button>
+        </div>
+      </div>
+
+      <div class="table-container" style="border:none; border-radius:0;">
+        <table>
+          <thead>
+            <tr>
+              <th>用户名</th>
+              <th>姓名</th>
+              <th>邮箱</th>
+              <th>角色</th>
+              <th>创建时间</th>
+              <th style="width: 150px">操作</th>
+            </tr>
+          </thead>
+          <tbody id="userTableBody">
+            <tr>
+              <td colspan="6" class="empty-row">正在加载...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="pagination-container">
+        <div class="page-size-selector">
+          <label for="pageSize">每页显示</label>
+          <select id="pageSize">
+            <option value="10">10</option>
+            <option value="20">20</option>
+            <option value="50">50</option>
+          </select>
+          <span>条</span>
+        </div>
+        <div class="pagination" id="pagination" style="margin-top: 0;">
+          <!-- pagination injected by JS -->
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Create User Modal -->
+  <div class="modal-overlay" id="createUserModal">
+    <div class="modal">
+      <h3>创建用户</h3>
+      <form id="createUserForm" onsubmit="return false;">
+        <div class="field">
+          <label>用户名 <span style="color:var(--red)">*</span></label>
+          <input type="text" id="createUsername" required />
+        </div>
+        <div class="field">
+          <label>姓名</label>
+          <input type="text" id="createFullName" />
+        </div>
+        <div class="field">
+          <label>邮箱 <span style="color:var(--red)">*</span></label>
+          <input type="email" id="createEmail" required />
+        </div>
+        <div class="field">
+          <label>密码 <span style="color:var(--red)">*</span></label>
+          <input type="password" id="createPassword" required minlength="6" />
+        </div>
+        <div class="field">
+          <label>角色 <span style="color:var(--red)">*</span></label>
+          <select id="createRole" required>
+            <!-- Options populated dynamically -->
+          </select>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn" id="closeCreateBtn">取消</button>
+          <button type="submit" class="btn primary" id="submitCreateBtn">创建</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Update User Modal -->
+  <div class="modal-overlay" id="updateUserModal">
+    <div class="modal">
+      <h3>更新用户</h3>
+      <form id="updateUserForm" onsubmit="return false;">
+        <input type="hidden" id="updateTargetUsername" />
+        <div class="field">
+          <label>用户名</label>
+          <div id="updateUsernameDisplay" style="padding: 0.5rem 0; font-weight:600; color:var(--text-muted)"></div>
+        </div>
+        <div class="field">
+          <label>姓名</label>
+          <input type="text" id="updateFullName" />
+        </div>
+        <div class="field">
+          <label>邮箱</label>
+          <input type="email" id="updateEmail" />
+        </div>
+        <div class="field" id="updateRoleField">
+          <label>角色 (仅 Admin 可修改)</label>
+          <select id="updateRole">
+            <option value="user">User</option>
+            <option value="manager">Manager</option>
+          </select>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn" id="closeUpdateBtn">取消</button>
+          <button type="submit" class="btn primary" id="submitUpdateBtn">保存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script type="module" src="js/pages/users.js"></script>
+</body>
+</html>

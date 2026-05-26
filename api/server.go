@@ -93,11 +93,11 @@ func (server *Server) setupRouter() {
 	userRoutes.PATCH("/user-rooms/:room_id", server.updateUserRoom)
 	userRoutes.DELETE("/user-rooms/:room_id", server.deleteUserRoom)
 	// 代理路由：转发到 xiaofubao 外部 API
-	managerRoutes.GET("/proxy/areas", server.proxyQueryArea)
-	managerRoutes.GET("/proxy/buildings", server.proxyQueryBuilding)
-	managerRoutes.GET("/proxy/floors", server.proxyQueryFloor)
-	managerRoutes.GET("/proxy/rooms", server.proxyQueryRoom)
-	managerRoutes.GET("/proxy/room-surplus", server.proxyQueryRoomSurplus)
+	userRoutes.GET("/proxy/areas", server.proxyQueryArea)
+	userRoutes.GET("/proxy/buildings", server.proxyQueryBuilding)
+	userRoutes.GET("/proxy/floors", server.proxyQueryFloor)
+	userRoutes.GET("/proxy/rooms", server.proxyQueryRoom)
+	userRoutes.GET("/proxy/room-surplus", server.proxyQueryRoomSurplus)
 
 	managerRoutes.POST("/electricity-balances/import/:room_id", server.importElectricityRecords)
 
