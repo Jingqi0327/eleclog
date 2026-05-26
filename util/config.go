@@ -8,12 +8,12 @@ import (
 
 // Config存储应用程序的配置信息
 type Config struct {
-	Environment  string `mapstructure:"ENVIRONMENT"`
-	RunMode      string `mapstructure:"RUN_MODE"`
-	DBDriver     string `mapstructure:"DB_DRIVER"`
-	DBSource     string `mapstructure:"DB_SOURCE"`
-	MigrationURL string `mapstructure:"MIGRATION_URL"`
-	RedisAddress string `mapstructure:"REDIS_ADDRESS"`
+	Environment          string        `mapstructure:"ENVIRONMENT"`
+	RunMode              string        `mapstructure:"RUN_MODE"`
+	DBDriver             string        `mapstructure:"DB_DRIVER"`
+	DBSource             string        `mapstructure:"DB_SOURCE"`
+	MigrationURL         string        `mapstructure:"MIGRATION_URL"`
+	RedisAddress         string        `mapstructure:"REDIS_ADDRESS"`
 	HTTPServerAddress    string        `mapstructure:"HTTP_SERVER_ADDRESS"`
 	TokenSymmetricKey    string        `mapstructure:"TOKEN_SYMMETRIC_KEY"`
 	AccessTokenDuration  time.Duration `mapstructure:"ACCESS_TOKEN_DURATION"`
@@ -29,6 +29,7 @@ type Config struct {
 	Email                string        `mapstructure:"EMAIL"`
 	DetectLowBalanceCron string        `mapstructure:"DETECT_LOW_BALANCE_CRON"`
 	FetchSurplusCron     string        `mapstructure:"FETCH_SURPLUS_CRON"`
+	FrontendOrigin       string        `mapstructure:"FRONTEND_ORIGIN"`
 }
 
 // LoadConfig 从指定路径加载配置文件

@@ -55,6 +55,7 @@ jobs:
         echo "EMAIL=${{ secrets.EMAIL_SENDER_ADDRESS }}" >> app.env
         echo 'DETECT_LOW_BALANCE_CRON="10 * * * *"' >> app.env
         echo 'FETCH_SURPLUS_CRON="5 * * * *"' >> app.env
+        echo 'FRONTEND_ORIGIN=${{ secrets.FRONTEND_ORIGIN }}' >> app.env
 
     # 4. 配置 QEMU (必须项：用于支持后面的 arm64 跨架构构建)
     - name: Set up QEMU

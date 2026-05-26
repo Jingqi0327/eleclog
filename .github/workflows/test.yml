@@ -55,8 +55,10 @@ jobs:
         echo "ACCESS_TOKEN_DURATION=15m" >> app.env
         echo "REFRESH_TOKEN_DURATION=24h" >> app.env
         echo "PRICE_PER_KWH=0.5" >> app.env
+        echo "FRONTEND_ORIGIN=http://example.com" >> app.env
         # 如果你的测试需要真实的密码/Token等，可以利用 GitHub Secrets：
         # echo "SHIRO_JID=${{ secrets.SHIRO_JID }}" >> app.env
+
     # 迁移数据库
     - name: Run migration
       run: make migrateup

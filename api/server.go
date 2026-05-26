@@ -54,10 +54,15 @@ func (server *Server) setupRouter() {
 	// router := gin.Default()
 	router := gin.New()
 
+	origins := []string{"http://localhost:3001"}
+	if server.config.FrontendOrigin != "" {
+		origins = append(origins, server.config.FrontendOrigin)
+	}
+
 	// 启用CORS支持
 	router.Use(cors.New(cors.Config{
 		// 允许访问的域名列表（替换为你前端真实的生产域名）
-		AllowOrigins: []string{"http://localhost:3001"},
+		AllowOrigins: origins,
 		// 允许的请求方法
 		AllowMethods: []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		// 允许携带的自定义请求头
