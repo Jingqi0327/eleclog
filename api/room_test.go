@@ -656,3 +656,147 @@ func TestDeleteRoomAPI(t *testing.T) {
 		})
 	}
 }
+
+func TestBindRoomToUserAPI(t *testing.T) {
+	room := newRoom()
+	username := util.RandomName(6)
+	threshold := int32(100)
+
+	testCases := []struct {
+		name             string
+		body             gin.H
+		addAuthorization func(t *testing.T, request *http.Request, tokenMaker token.Maker)
+		buildStubs       func(store *mockdb.MockStore)
+		checkResponse    func(t *testing.T, recorder *httptest.ResponseRecorder)
+	}{
+		{
+			name: "OK",
+			body: gin.H{
+				"name":          room.Name,
+				"area_id":       room.AreaID,
+				"building_code": room.BuildingCode,
+				"floor_code":    room.FloorCode,
+				"room_code":     room.RoomCode,
+				"threshold":     threshold,
+			},
+			addAuthorization: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, username, util.UserRole, time.Minute)
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				arg := db.BindRoomToUserTxParams{
+					Username:     username,
+					Name:         room.Name,
+					AreaID:       room.AreaID,
+					BuildingCode: room.BuildingCode,
+					FloorCode:    room.FloorCode,
+					RoomCode:     room.RoomCode,
+					Threshold:    threshold,
+				}
+				result := db.BindRoomToUserTxResult{
+					Room: room,
+				}
+				store.EXPECT().
+					BindRoomToUserTx(gomock.Any(), gomock.Eq(arg)).
+					Times(1).
+					Return(result, nil)
+			},
+			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, recorder.Code)
+				checkRoomResponse(t, recorder.Body, room)
+			},
+		},
+		{
+			name: "InternalError",
+			body: gin.H{
+				"name":          room.Name,
+				"area_id":       room.AreaID,
+				"building_code": room.BuildingCode,
+				"floor_code":    room.FloorCode,
+				"room_code":     room.RoomCode,
+				"threshold":     threshold,
+			},
+			addAuthorization: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, username, util.UserRole, time.Minute)
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().
+					BindRoomToUserTx(gomock.Any(), gomock.Any()).
+					Times(1).
+					Return(db.BindRoomToUserTxResult{}, sql.ErrConnDone)
+			},
+			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusInternalServerError, recorder.Code)
+			},
+		},
+		{
+			name: "InvalidThreshold",
+			body: gin.H{
+				"name":          room.Name,
+				"area_id":       room.AreaID,
+				"building_code": room.BuildingCode,
+				"floor_code":    room.FloorCode,
+				"room_code":     room.RoomCode,
+				"threshold":     -10, // Must be >= 0
+			},
+			addAuthorization: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, username, util.UserRole, time.Minute)
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().
+					BindRoomToUserTx(gomock.Any(), gomock.Any()).
+					Times(0)
+			},
+			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusBadRequest, recorder.Code)
+			},
+		},
+		{
+			name: "Unauthorized",
+			body: gin.H{
+				"name":          room.Name,
+				"area_id":       room.AreaID,
+				"building_code": room.BuildingCode,
+				"floor_code":    room.FloorCode,
+				"room_code":     room.RoomCode,
+				"threshold":     threshold,
+			},
+			addAuthorization: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				// No authorization
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().
+					BindRoomToUserTx(gomock.Any(), gomock.Any()).
+					Times(0)
+			},
+			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusUnauthorized, recorder.Code)
+			},
+		},
+	}
+
+	for i := range testCases {
+		tc := testCases[i]
+
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			store := mockdb.NewMockStore(ctrl)
+			tc.buildStubs(store)
+
+			server := newTestServer(t, store)
+			recorder := httptest.NewRecorder()
+
+			data, err := json.Marshal(tc.body)
+			require.NoError(t, err)
+
+			url := "/users/rooms/bind"
+			request, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(data))
+			require.NoError(t, err)
+
+			tc.addAuthorization(t, request, server.tokenMaker)
+			server.router.ServeHTTP(recorder, request)
+			tc.checkResponse(t, recorder)
+		})
+	}
+}

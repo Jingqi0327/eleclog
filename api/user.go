@@ -16,7 +16,7 @@ type createUserRequest struct {
 	Username string `json:"username" binding:"required,alphanum"` //alphanum表示用户名只能包含字母和数字
 	Password string `json:"password" binding:"required,min=6"`    //min=6表示密码至少要有6个字符
 	FullName string `json:"full_name" binding:"required"`
-	Role     string `json:"role" binding:"omitempty"`       //TODO :自定义参数验证器
+	Role     string `json:"role" binding:"role"`       
 	Email    string `json:"email" binding:"required,email"` //email表示邮箱格式必须正确
 }
 
@@ -150,7 +150,7 @@ type UpdateUserRequest struct {
 	Password *string `json:"password,omitempty" binding:"omitempty,min=6"` //omitempty表示如果密码字段为空，则不进行验证
 	FullName *string `json:"full_name,omitempty"`
 	Email    *string `json:"email,omitempty" binding:"omitempty,email"`
-	Role     *string `json:"role,omitempty" binding:"omitempty"`
+	Role     *string `json:"role,omitempty" binding:"omitempty,role"`
 }
 
 type UpdateUserResponse struct {

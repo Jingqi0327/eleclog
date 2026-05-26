@@ -14,6 +14,7 @@ import (
 
 	mockdb "github.com/Jingqi0327/eleclog/db/mock"
 	db "github.com/Jingqi0327/eleclog/db/sqlc"
+	"github.com/Jingqi0327/eleclog/token"
 	"github.com/Jingqi0327/eleclog/util"
 	"github.com/gin-gonic/gin"
 	"github.com/golang/mock/gomock"
@@ -44,18 +45,21 @@ func checkElectricityBalanceResponse(t *testing.T, body *bytes.Buffer, expected 
 }
 
 func TestGetLatestElectricityBalanceAPI(t *testing.T) {
-	t.Skip()
 	record := newElectricityRecord()
 
 	testCases := []struct {
 		name          string
 		roomID        int64
+		setupAuth     func(t *testing.T, request *http.Request, tokenMaker token.Maker)
 		buildStubs    func(store *mockdb.MockStore)
 		checkResponse func(t *testing.T, recorder *httptest.ResponseRecorder)
 	}{
 		{
 			name:   "OK",
 			roomID: record.RoomID,
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, "admin", util.AdminRole, time.Minute)
+			},
 			buildStubs: func(store *mockdb.MockStore) {
 				store.EXPECT().
 					GetLatestBalance(gomock.Any(), gomock.Eq(record.RoomID)).
@@ -68,8 +72,57 @@ func TestGetLatestElectricityBalanceAPI(t *testing.T) {
 			},
 		},
 		{
+			name:   "UserOK",
+			roomID: record.RoomID,
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, "user", util.UserRole, time.Minute)
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().
+					GetUserRoom(gomock.Any(), gomock.Eq(db.GetUserRoomParams{
+						Username: "user",
+						RoomID:   record.RoomID,
+					})).
+					Times(1).
+					Return(db.UserRoom{}, nil)
+				store.EXPECT().
+					GetLatestBalance(gomock.Any(), gomock.Eq(record.RoomID)).
+					Times(1).
+					Return(record, nil)
+			},
+			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, recorder.Code)
+				checkElectricityBalanceResponse(t, recorder.Body, record)
+			},
+		},
+		{
+			name:   "UserForbidden",
+			roomID: record.RoomID,
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, "user", util.UserRole, time.Minute)
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().
+					GetUserRoom(gomock.Any(), gomock.Eq(db.GetUserRoomParams{
+						Username: "user",
+						RoomID:   record.RoomID,
+					})).
+					Times(1).
+					Return(db.UserRoom{}, db.ErrRecordNotFound)
+				store.EXPECT().
+					GetLatestBalance(gomock.Any(), gomock.Any()).
+					Times(0)
+			},
+			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusForbidden, recorder.Code)
+			},
+		},
+		{
 			name:   "NotFound",
 			roomID: record.RoomID,
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, "admin", util.AdminRole, time.Minute)
+			},
 			buildStubs: func(store *mockdb.MockStore) {
 				store.EXPECT().
 					GetLatestBalance(gomock.Any(), gomock.Eq(record.RoomID)).
@@ -83,6 +136,9 @@ func TestGetLatestElectricityBalanceAPI(t *testing.T) {
 		{
 			name:   "InternalError",
 			roomID: record.RoomID,
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, "admin", util.AdminRole, time.Minute)
+			},
 			buildStubs: func(store *mockdb.MockStore) {
 				store.EXPECT().
 					GetLatestBalance(gomock.Any(), gomock.Eq(record.RoomID)).
@@ -96,6 +152,9 @@ func TestGetLatestElectricityBalanceAPI(t *testing.T) {
 		{
 			name:   "InvalidID",
 			roomID: 0,
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, "admin", util.AdminRole, time.Minute)
+			},
 			buildStubs: func(store *mockdb.MockStore) {
 				store.EXPECT().
 					GetLatestBalance(gomock.Any(), gomock.Any()).
@@ -123,6 +182,8 @@ func TestGetLatestElectricityBalanceAPI(t *testing.T) {
 			request, err := http.NewRequest(http.MethodGet, url, nil)
 			require.NoError(t, err)
 
+			tc.setupAuth(t, request, server.tokenMaker)
+
 			server.router.ServeHTTP(recorder, request)
 			tc.checkResponse(t, recorder)
 		})
@@ -130,7 +191,6 @@ func TestGetLatestElectricityBalanceAPI(t *testing.T) {
 }
 
 func TestGetElectricityRecordByHourRangeAPI(t *testing.T) {
-	t.Skip()
 	roomID := util.RandomInt(1, 1000)
 	now := time.Now()
 	startTime := now.Add(-3 * time.Hour)
@@ -162,6 +222,7 @@ func TestGetElectricityRecordByHourRangeAPI(t *testing.T) {
 		name          string
 		roomID        int64
 		query         gin.H
+		setupAuth     func(t *testing.T, request *http.Request, tokenMaker token.Maker)
 		buildStubs    func(store *mockdb.MockStore)
 		checkResponse func(t *testing.T, recorder *httptest.ResponseRecorder)
 	}{
@@ -172,11 +233,12 @@ func TestGetElectricityRecordByHourRangeAPI(t *testing.T) {
 				"start_time": startTime.Format(time.RFC3339),
 				"end_time":   endTime.Format(time.RFC3339),
 			},
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, "admin", util.AdminRole, time.Minute)
+			},
 			buildStubs: func(store *mockdb.MockStore) {
-				// bufferStartTime := req.StartTime.Add(-1 * time.Hour - 10 * time.Minute)
-				// 匹配参数
 				store.EXPECT().
-					GetRecordsByHourRange(gomock.Any(), gomock.Any()). // TODO: match precise params
+					GetRecordsByHourRange(gomock.Any(), gomock.Any()).
 					Times(1).
 					Return(records, nil)
 			},
@@ -195,11 +257,40 @@ func TestGetElectricityRecordByHourRangeAPI(t *testing.T) {
 			},
 		},
 		{
+			name:   "UserForbidden",
+			roomID: roomID,
+			query: gin.H{
+				"start_time": startTime.Format(time.RFC3339),
+				"end_time":   endTime.Format(time.RFC3339),
+			},
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, "user", util.UserRole, time.Minute)
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().
+					GetUserRoom(gomock.Any(), gomock.Eq(db.GetUserRoomParams{
+						Username: "user",
+						RoomID:   roomID,
+					})).
+					Times(1).
+					Return(db.UserRoom{}, db.ErrRecordNotFound)
+				store.EXPECT().
+					GetRecordsByHourRange(gomock.Any(), gomock.Any()).
+					Times(0)
+			},
+			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusForbidden, recorder.Code)
+			},
+		},
+		{
 			name:   "InternalError",
 			roomID: roomID,
 			query: gin.H{
 				"start_time": startTime.Format(time.RFC3339),
 				"end_time":   endTime.Format(time.RFC3339),
+			},
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, "admin", util.AdminRole, time.Minute)
 			},
 			buildStubs: func(store *mockdb.MockStore) {
 				store.EXPECT().
@@ -217,6 +308,9 @@ func TestGetElectricityRecordByHourRangeAPI(t *testing.T) {
 			query: gin.H{
 				"start_time": "invalid-time",
 				"end_time":   endTime.Format(time.RFC3339),
+			},
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, "admin", util.AdminRole, time.Minute)
 			},
 			buildStubs: func(store *mockdb.MockStore) {
 				store.EXPECT().
@@ -250,6 +344,8 @@ func TestGetElectricityRecordByHourRangeAPI(t *testing.T) {
 				q.Add(k, v.(string))
 			}
 			request.URL.RawQuery = q.Encode()
+
+			tc.setupAuth(t, request, server.tokenMaker)
 
 			server.router.ServeHTTP(recorder, request)
 			tc.checkResponse(t, recorder)

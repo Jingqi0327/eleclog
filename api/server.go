@@ -12,6 +12,8 @@ import (
 	"github.com/Jingqi0327/eleclog/util"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
+	"github.com/go-playground/validator/v10"
 )
 
 type Server struct {
@@ -37,6 +39,12 @@ func NewServer(config util.Config, store db.Store, c cache.Cache) (*Server, erro
 		tokenMaker: tokenMaker,
 	}
 
+	// 注册验证器
+	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
+		v.RegisterValidation("role", validRole)
+	}
+
+	// 设置路由
 	server.setupRouter()
 
 	return server, nil

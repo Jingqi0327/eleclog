@@ -39,7 +39,7 @@ func TestCreateUserAPI(t *testing.T) {
 				"password":  password,
 				"full_name": user.FullName,
 				"email":     user.Email,
-				"role":      util.ManagerRole,
+				"role":      user.Role,
 			},
 			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
 				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, "admin", util.AdminRole, time.Minute)
@@ -50,6 +50,7 @@ func TestCreateUserAPI(t *testing.T) {
 					HashedPassword: user.HashedPassword,
 					FullName:       user.FullName,
 					Email:          user.Email,
+					Role:           user.Role,
 				}
 				store.EXPECT().
 					CreateUser(gomock.Any(), EqCreateUserParams(arg, password)).
@@ -89,7 +90,7 @@ func TestCreateUserAPI(t *testing.T) {
 				"password":  password,
 				"full_name": user.FullName,
 				"email":     user.Email,
-				"role":      util.ManagerRole,
+				"role":      user.Role,
 			},
 			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
 				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, "admin", util.AdminRole, time.Minute)
@@ -111,7 +112,7 @@ func TestCreateUserAPI(t *testing.T) {
 				"password":  password,
 				"full_name": user.FullName,
 				"email":     user.Email,
-				"role":      util.ManagerRole,
+				"role":      user.Role,
 			},
 			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
 				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, "admin", util.AdminRole, time.Minute)
@@ -133,7 +134,7 @@ func TestCreateUserAPI(t *testing.T) {
 				"password":  password,
 				"full_name": user.FullName,
 				"email":     user.Email,
-				"role":      util.ManagerRole,
+				"role":      user.Role,
 			},
 			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
 				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, "admin", util.AdminRole, time.Minute)
@@ -154,7 +155,7 @@ func TestCreateUserAPI(t *testing.T) {
 				"password":  password,
 				"full_name": user.FullName,
 				"email":     "invalid-email",
-				"role":      util.ManagerRole,
+				"role":      user.Role,
 			},
 			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
 				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, "admin", util.AdminRole, time.Minute)
@@ -175,7 +176,28 @@ func TestCreateUserAPI(t *testing.T) {
 				"password":  "123",
 				"full_name": user.FullName,
 				"email":     user.Email,
-				"role":      util.ManagerRole,
+				"role":      user.Role,
+			},
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, "admin", util.AdminRole, time.Minute)
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().
+					CreateUser(gomock.Any(), gomock.Any()).
+					Times(0)
+			},
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusBadRequest, recorder.Code)
+			},
+		},
+		{
+			name:"InvalidRole",
+			body: gin.H{
+				"username":  user.Username,
+				"password":  password,
+				"full_name": user.FullName,
+				"email":     user.Email,
+				"role":      "invalid-role",
 			},
 			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
 				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, "admin", util.AdminRole, time.Minute)
@@ -378,7 +400,7 @@ func TestUpdateUserAPI(t *testing.T) {
 			name: "OK",
 			body: reqBody,
 			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
-				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.Username, util.AdminRole, time.Minute)
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.Username, user.Role, time.Minute)
 			},
 			buildStubs: func(store *mockdb.MockStore) {
 				arg := db.UpdateUserParams{
@@ -388,7 +410,7 @@ func TestUpdateUserAPI(t *testing.T) {
 					Email:          pgtype.Text{String: user.Email, Valid: true},
 				}
 				store.EXPECT().
-					UpdateUser(gomock.Any(), EqUpdateUserParams(arg, password)).
+					UpdateUser(gomock.Any(), EqUpdateUserParamsWithPassword(arg, password)).
 					Times(1).
 					Return(user, nil)
 			},
@@ -416,7 +438,7 @@ func TestUpdateUserAPI(t *testing.T) {
 			name: "UpdateOtherUser",
 			body: reqBody,
 			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
-				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, "otheruser", util.AdminRole, time.Minute)
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, "otheruser", util.UserRole, time.Minute)
 			},
 			buildStubs: func(store *mockdb.MockStore) {
 				store.EXPECT().
@@ -431,7 +453,7 @@ func TestUpdateUserAPI(t *testing.T) {
 			name: "InternalError",
 			body: reqBody,
 			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
-				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.Username, util.AdminRole, time.Minute)
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.Username, util.UserRole, time.Minute)
 			},
 			buildStubs: func(store *mockdb.MockStore) {
 				store.EXPECT().
@@ -447,7 +469,7 @@ func TestUpdateUserAPI(t *testing.T) {
 			name: "UserNotFound",
 			body: reqBody,
 			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
-				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.Username, util.AdminRole, time.Minute)
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.Username, util.UserRole, time.Minute)
 			},
 			buildStubs: func(store *mockdb.MockStore) {
 				store.EXPECT().
@@ -457,6 +479,50 @@ func TestUpdateUserAPI(t *testing.T) {
 			},
 			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusNotFound, recorder.Code)
+			},
+		},
+		{
+			name: "AdminCanUpdateRole",
+			body: gin.H{
+				"username": user.Username,
+				"role":     util.AdminRole,
+			},
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.Username, util.AdminRole, time.Minute)
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				arg := db.UpdateUserParams{
+					Username: user.Username,
+					Role: pgtype.Text{
+						String: util.AdminRole,
+						Valid:  true,
+					},
+				}
+				store.EXPECT().
+					UpdateUser(gomock.Any(), gomock.Eq(arg)).
+					Times(1).
+					Return(user, nil)
+			},
+			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, recorder.Code)
+			},
+		},
+		{
+			name: "ManagerCannotUpdateRole",
+			body: gin.H{
+				"username": user.Username,
+				"role":     util.ManagerRole,
+			},
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.Username, util.ManagerRole, time.Minute)
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().
+					UpdateUser(gomock.Any(), gomock.Any()).
+					Times(0)
+			},
+			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusForbidden, recorder.Code)
 			},
 		},
 	}
@@ -527,6 +593,93 @@ func TestListUsersAPI(t *testing.T) {
 				require.Equal(t, http.StatusOK, recorder.Code)
 			},
 		},
+		{
+			name: "InvalidPageID",
+			query: Query{
+				pageID:   0,
+				pageSize: 10,
+			},
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, "admin", util.AdminRole, time.Minute)
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().ListUsers(gomock.Any(), gomock.Any()).Times(0)
+				store.EXPECT().CountUsers(gomock.Any()).Times(0)
+			},
+			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusBadRequest, recorder.Code)
+			},
+		},
+		{
+			name: "InvalidPageSize",
+			query: Query{
+				pageID:   1,
+				pageSize: 100,
+			},
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, "admin", util.AdminRole, time.Minute)
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().ListUsers(gomock.Any(), gomock.Any()).Times(0)
+				store.EXPECT().CountUsers(gomock.Any()).Times(0)
+			},
+			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusBadRequest, recorder.Code)
+			},
+		},
+		{
+			name: "InternalError_ListUsers",
+			query: Query{
+				pageID:   1,
+				pageSize: 10,
+			},
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, "admin", util.AdminRole, time.Minute)
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				arg := db.ListUsersParams{
+					Limit:  10,
+					Offset: 0,
+				}
+				store.EXPECT().
+					ListUsers(gomock.Any(), gomock.Eq(arg)).
+					Times(1).
+					Return([]db.User{}, sql.ErrConnDone)
+				store.EXPECT().
+					CountUsers(gomock.Any()).
+					Times(0)
+			},
+			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusInternalServerError, recorder.Code)
+			},
+		},
+		{
+			name: "InternalError_CountUsers",
+			query: Query{
+				pageID:   1,
+				pageSize: 10,
+			},
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, "admin", util.AdminRole, time.Minute)
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				arg := db.ListUsersParams{
+					Limit:  10,
+					Offset: 0,
+				}
+				store.EXPECT().
+					ListUsers(gomock.Any(), gomock.Eq(arg)).
+					Times(1).
+					Return([]db.User{}, nil)
+				store.EXPECT().
+					CountUsers(gomock.Any()).
+					Times(1).
+					Return(int64(0), sql.ErrConnDone)
+			},
+			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusInternalServerError, recorder.Code)
+			},
+		},
 	}
 
 	for i := range testCase {
@@ -559,19 +712,18 @@ func TestListUsersAPI(t *testing.T) {
 	}
 }
 
-
-func TestDeleteUserAPI(t *testing.T){
-	user,_ :=randomUser(t)
-	user.Role=util.UserRole
-	testCases:=[]struct{
-		name string
-		username string
-		setupAuth func(t *testing.T, request *http.Request, tokenMaker token.Maker)
-		buildStubs func(store *mockdb.MockStore)
+func TestDeleteUserAPI(t *testing.T) {
+	user, _ := randomUser(t)
+	user.Role = util.UserRole
+	testCases := []struct {
+		name          string
+		username      string
+		setupAuth     func(t *testing.T, request *http.Request, tokenMaker token.Maker)
+		buildStubs    func(store *mockdb.MockStore)
 		checkResponse func(t *testing.T, recoder *httptest.ResponseRecorder)
 	}{
 		{
-			name: "OK",
+			name:     "OK",
 			username: user.Username,
 			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
 				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, "admin", util.AdminRole, time.Minute)
@@ -590,7 +742,128 @@ func TestDeleteUserAPI(t *testing.T){
 				require.Equal(t, http.StatusOK, recorder.Code)
 			},
 		},
-		// TODO: 补单测
+		{
+			name:     "UserNotFound",
+			username: "notfound",
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, "admin", util.AdminRole, time.Minute)
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().
+					GetUser(gomock.Any(), gomock.Eq("notfound")).
+					Times(1).
+					Return(db.User{}, db.ErrRecordNotFound)
+				store.EXPECT().
+					DeleteUser(gomock.Any(), gomock.Any()).
+					Times(0)
+			},
+			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusNotFound, recorder.Code)
+			},
+		},
+		{
+			name:     "DeleteAdmin",
+			username: "adminuser",
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, "admin", util.AdminRole, time.Minute)
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				adminTarget := user
+				adminTarget.Role = util.AdminRole
+				store.EXPECT().
+					GetUser(gomock.Any(), gomock.Eq("adminuser")).
+					Times(1).
+					Return(adminTarget, nil)
+				store.EXPECT().
+					DeleteUser(gomock.Any(), gomock.Any()).
+					Times(0)
+			},
+			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusForbidden, recorder.Code)
+			},
+		},
+		{
+			name:     "ManagerCannotDeleteManager",
+			username: "manageruser",
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, "manager", util.ManagerRole, time.Minute)
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				managerTarget := user
+				managerTarget.Role = util.ManagerRole
+				store.EXPECT().
+					GetUser(gomock.Any(), gomock.Eq("manageruser")).
+					Times(1).
+					Return(managerTarget, nil)
+				store.EXPECT().
+					DeleteUser(gomock.Any(), gomock.Any()).
+					Times(0)
+			},
+			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusForbidden, recorder.Code)
+			},
+		},
+		{
+			name:     "AdminCanDeleteManager",
+			username: "manageruser",
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, "admin", util.AdminRole, time.Minute)
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				managerTarget := user
+				managerTarget.Role = util.ManagerRole
+				store.EXPECT().
+					GetUser(gomock.Any(), gomock.Eq("manageruser")).
+					Times(1).
+					Return(managerTarget, nil)
+				store.EXPECT().
+					DeleteUser(gomock.Any(), gomock.Eq("manageruser")).
+					Times(1).
+					Return(nil)
+			},
+			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, recorder.Code)
+			},
+		},
+		{
+			name:     "InternalError_GetUser",
+			username: user.Username,
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, "admin", util.AdminRole, time.Minute)
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().
+					GetUser(gomock.Any(), gomock.Eq(user.Username)).
+					Times(1).
+					Return(db.User{}, sql.ErrConnDone)
+				store.EXPECT().
+					DeleteUser(gomock.Any(), gomock.Any()).
+					Times(0)
+			},
+			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusInternalServerError, recorder.Code)
+			},
+		},
+		{
+			name:     "InternalError_DeleteUser",
+			username: user.Username,
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, "admin", util.AdminRole, time.Minute)
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().
+					GetUser(gomock.Any(), gomock.Eq(user.Username)).
+					Times(1).
+					Return(user, nil)
+				store.EXPECT().
+					DeleteUser(gomock.Any(), gomock.Eq(user.Username)).
+					Times(1).
+					Return(sql.ErrConnDone)
+			},
+			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusInternalServerError, recorder.Code)
+			},
+		},
 	}
 
 	for i := range testCases {
@@ -616,7 +889,6 @@ func TestDeleteUserAPI(t *testing.T){
 		})
 	}
 }
-
 
 func requireBodyMatchUpdateUser(t *testing.T, body *bytes.Buffer, user db.User) {
 	data, err := io.ReadAll(body)
@@ -644,6 +916,7 @@ func randomUser(t *testing.T) (user db.User, password string) {
 		HashedPassword: hashedPassword,
 		FullName:       util.RandomName(6),
 		Email:          util.RandomEmail(),
+		Role:           util.UserRole,
 	}
 	return
 }
