@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package pb;
+
+option go_package = "github.com/Jingqi0327/eleclog/pb";
+
+import "rpc_query_area.proto";
+import "rpc_query_building.proto";
+import "rpc_query_floor.proto";
+import "rpc_query_room.proto";
+import "rpc_query_room_surplus.proto";
+
+service ProxyService {
+	rpc QueryArea(QueryAreaRequest) returns (QueryAreaResponse) {}
+	rpc QueryBuilding(QueryBuildingRequest) returns (QueryBuildingResponse) {}
+	rpc QueryFloor(QueryFloorRequest) returns (QueryFloorResponse) {}
+	rpc QueryRoom(QueryRoomRequest) returns (QueryRoomResponse) {}
+	rpc QueryRoomSurplus(QueryRoomSurplusRequest) returns (QueryRoomSurplusResponse) {}
+}
