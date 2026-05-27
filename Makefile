@@ -48,4 +48,10 @@ image:
 redis:
 	docker run  --name redis -p 6379:6379 -d redis:8-alpine3.23
 
-.PHONY: createdb dropdb createtestdb droptestdb migrateup migratedown migratetestup migratetestdown migrateup1 migratedown1 new_migration db_schema sqlc server test frontend mock image redis
+proto:
+	rm -rf pb/*.go
+	protoc --proto_path=proto --go_out=pb --go_opt=paths=source_relative \
+	--go-grpc_out=pb --go-grpc_opt=paths=source_relative \
+	proto/*.proto
+
+.PHONY: createdb dropdb createtestdb droptestdb migrateup migratedown migratetestup migratetestdown migrateup1 migratedown1 new_migration db_schema sqlc server test frontend mock image redis proto

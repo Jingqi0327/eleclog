@@ -15,6 +15,7 @@ type Config struct {
 	MigrationURL         string        `mapstructure:"MIGRATION_URL"`
 	RedisAddress         string        `mapstructure:"REDIS_ADDRESS"`
 	HTTPServerAddress    string        `mapstructure:"HTTP_SERVER_ADDRESS"`
+	GrpcServerAddress    string        `mapstructure:"GRPC_SERVER_ADDRESS"`
 	TokenSymmetricKey    string        `mapstructure:"TOKEN_SYMMETRIC_KEY"`
 	AccessTokenDuration  time.Duration `mapstructure:"ACCESS_TOKEN_DURATION"`
 	RefreshTokenDuration time.Duration `mapstructure:"REFRESH_TOKEN_DURATION"`
@@ -30,6 +31,7 @@ type Config struct {
 	DetectLowBalanceCron string        `mapstructure:"DETECT_LOW_BALANCE_CRON"`
 	FetchSurplusCron     string        `mapstructure:"FETCH_SURPLUS_CRON"`
 	FrontendOrigin       string        `mapstructure:"FRONTEND_ORIGIN"`
+	ProxygRPCAddress     string        `mapstructure:"PROXY_GRPC_ADDRESS"`
 }
 
 // LoadConfig 从指定路径加载配置文件

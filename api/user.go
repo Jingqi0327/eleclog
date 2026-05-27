@@ -13,7 +13,7 @@ import (
 )
 
 type createUserRequest struct {
-	Username string `json:"username" binding:"required,alphanum"` //alphanum表示用户名只能包含字母和数字
+	Username string `json:"username" binding:"required"` 
 	Password string `json:"password" binding:"required,min=6"`    //min=6表示密码至少要有6个字符
 	FullName string `json:"full_name" binding:"required"`
 	Role     string `json:"role" binding:"role"`       
@@ -87,7 +87,7 @@ func (server *Server) createUser(ctx *gin.Context) {
 }
 
 type loginUserRequest struct {
-	Username string `json:"username" binding:"required,alphanum"`
+	Username string `json:"username" binding:"required"`
 	Password string `json:"password" binding:"required,min=6"`
 }
 
@@ -146,7 +146,7 @@ func (server *Server) loginUser(ctx *gin.Context) {
 }
 
 type UpdateUserRequest struct {
-	Username string  `json:"username" binding:"required,alphanum"`
+	Username string  `json:"username" binding:"required"`
 	Password *string `json:"password,omitempty" binding:"omitempty,min=6"` //omitempty表示如果密码字段为空，则不进行验证
 	FullName *string `json:"full_name,omitempty"`
 	Email    *string `json:"email,omitempty" binding:"omitempty,email"`
@@ -277,7 +277,7 @@ func (server *Server) ListUsers(ctx *gin.Context) {
 }
 
 type DeleteUserRequest struct {
-	Username string `uri:"username" binding:"required,alphanum"`
+	Username string `uri:"username" binding:"required"`
 }
 
 func (server *Server) deleteUser(ctx *gin.Context) {

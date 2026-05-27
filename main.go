@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -12,8 +13,10 @@ import (
 	"github.com/Jingqi0327/eleclog/api"
 	"github.com/Jingqi0327/eleclog/cache"
 	db "github.com/Jingqi0327/eleclog/db/sqlc"
+	"github.com/Jingqi0327/eleclog/gapi"
 	"github.com/Jingqi0327/eleclog/logger"
 	"github.com/Jingqi0327/eleclog/mail"
+	"github.com/Jingqi0327/eleclog/pb"
 	"github.com/Jingqi0327/eleclog/util"
 	"github.com/Jingqi0327/eleclog/worker"
 	"github.com/golang-migrate/migrate/v4"
@@ -25,6 +28,8 @@ import (
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 )
 
 // 定义停机信号列表，包含常见的中断信号
@@ -83,11 +88,15 @@ func main() {
 		logger.Log.Info("[System] Running in worker mode, skipping API server...")
 		runTaskScheduler(waitGroup, ctx, config, redisOpt)
 		runTaskProcessor(waitGroup, ctx, config, redisOpt, store, taskDistributor)
+	case "proxy":
+		logger.Log.Info("[System] Running in proxy mode...")
+		runGrpcServer(waitGroup, ctx, config)
 	default:
 		logger.Log.Info("[System] Running in full mode, starting API server, mail alerter...")
 		runTaskScheduler(waitGroup, ctx, config, redisOpt)
 		runTaskProcessor(waitGroup, ctx, config, redisOpt, store, taskDistributor)
 		runGinServer(waitGroup, ctx, config, store, redisCache)
+		runGrpcServer(waitGroup, ctx, config)
 	}
 
 	err = waitGroup.Wait()
@@ -198,6 +207,50 @@ func runTaskProcessor(
 		logger.Log.Info("[Processor] Task processor stopped successfully")
 		return nil
 	})
+}
+
+func runGrpcServer(waitGroup *errgroup.Group, ctx context.Context, config util.Config) {
+	server,err := gapi.NewServer(config)
+	if err != nil {
+		logger.Log.Fatal("[GRPC] Cannot create server:", zap.Error(err))
+	}
+
+	grpcServer := grpc.NewServer()
+
+	pb.RegisterProxyServiceServer(grpcServer, server)
+
+	reflection.Register(grpcServer)
+
+	listener, err := net.Listen("tcp", config.GrpcServerAddress)
+	if err != nil {
+		logger.Log.Fatal("[GRPC] Cannot create listener", zap.Error(err))
+	}
+
+	// 6. 启动服务器（阻塞调用）
+	waitGroup.Go(func() error {
+		logger.Log.Info("[GRPC] Starting gRPC server...")
+
+		err = grpcServer.Serve(listener)
+		if err != nil {
+			if errors.Is(err, grpc.ErrServerStopped) {
+				return nil
+			}
+			logger.Log.Fatal("[GRPC] Cannot serve gRPC server", zap.Error(err))
+			return err
+		}
+
+		return nil
+	})
+
+	// 7. 等待停机信号，并优雅地关闭服务器
+	waitGroup.Go(func() error {
+		<-ctx.Done()
+		logger.Log.Info("[GRPC] Graceful shutdown gRPC server...")
+		grpcServer.GracefulStop()
+		logger.Log.Info("[GRPC] gRPC server stopped successfully")
+		return nil
+	})
+
 }
 
 func initDefaultUser(config util.Config, store db.Store) {
