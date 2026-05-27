@@ -91,6 +91,11 @@ func main() {
 	case "proxy":
 		logger.Log.Info("[System] Running in proxy mode...")
 		runGrpcServer(waitGroup, ctx, config)
+	case "main":
+		logger.Log.Info("[System] Running in main mode...")
+		runTaskScheduler(waitGroup, ctx, config, redisOpt)
+		runTaskProcessor(waitGroup, ctx, config, redisOpt, store, taskDistributor)
+		runGinServer(waitGroup, ctx, config, store, redisCache)
 	default:
 		logger.Log.Info("[System] Running in full mode, starting API server, mail alerter...")
 		runTaskScheduler(waitGroup, ctx, config, redisOpt)
@@ -215,7 +220,8 @@ func runGrpcServer(waitGroup *errgroup.Group, ctx context.Context, config util.C
 		logger.Log.Fatal("[GRPC] Cannot create server:", zap.Error(err))
 	}
 
-	grpcServer := grpc.NewServer()
+	grpcLogger:=grpc.UnaryInterceptor(gapi.GrpcLogger)
+	grpcServer := grpc.NewServer(grpcLogger)
 
 	pb.RegisterProxyServiceServer(grpcServer, server)
 
