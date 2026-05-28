@@ -10,7 +10,7 @@ spec:
       protocol: TCP
       port: 7070
       targetPort: 7070
-  type: LoadBalancer       # 【关键】服务类型：
+  type: ClusterIP       # 【关键】服务类型：
                         # ClusterIP（默认）：只能在集群内部访问，适合微服务之间通信
                         # LoadBalancer的话，在你的环境下，MetalLB 会看到这个类型，并从 IP 池里拨一个 IP 
                         # 把它填入 EXTERNAL-IP 字段，实现公网/局域网直接访问

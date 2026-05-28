@@ -14,6 +14,8 @@ spec:
       labels:
         app: eleclog-proxy # 给新建的Pod贴上的“工牌”（重要：用于被Selector识别）
     spec:
+      nodeSelector:
+        type: proxy_node
       hostAliases:
       - ip: "10.0.0.17"  # 你的宿主机内网 IP
         hostnames:
