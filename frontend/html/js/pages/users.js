@@ -140,7 +140,7 @@ function renderTable(users) {
         <td>${u.full_name || '-'}</td>
         <td>${u.email}</td>
         <td>${getRoleBadge(u.role)}</td>
-        <td><span style="font-size:0.8rem; color:var(--text-muted)">${formatDate(u.password_changed_at)}</span></td>
+        <td><span style="font-size:0.8rem; color:var(--text-muted)">${formatDate(u.created_at)}</span></td>
         <td>
           <div class="actions">
             ${canEdit ? `<button class="btn" style="height:28px; padding:0 0.5rem;" onclick="window.openUpdateModal('${u.username}', '${u.full_name || ''}', '${u.email}', '${u.role}')">更新</button>` : ''}

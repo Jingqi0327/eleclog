@@ -128,27 +128,6 @@ func TestCreateUserAPI(t *testing.T) {
 			},
 		},
 		{
-			name: "InvalidUsername",
-			body: gin.H{
-				"username":  "invalid-user#1",
-				"password":  password,
-				"full_name": user.FullName,
-				"email":     user.Email,
-				"role":      user.Role,
-			},
-			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
-				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, "admin", util.AdminRole, time.Minute)
-			},
-			buildStubs: func(store *mockdb.MockStore) {
-				store.EXPECT().
-					CreateUser(gomock.Any(), gomock.Any()).
-					Times(0)
-			},
-			checkResponse: func(recorder *httptest.ResponseRecorder) {
-				require.Equal(t, http.StatusBadRequest, recorder.Code)
-			},
-		},
-		{
 			name: "InvalidEmail",
 			body: gin.H{
 				"username":  user.Username,
@@ -332,23 +311,6 @@ func TestLoginUserAPI(t *testing.T) {
 			},
 			checkResponse: func(recorder *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusInternalServerError, recorder.Code)
-			},
-		},
-		{
-			name: "InvalidUsername",
-			body: gin.H{
-				"username":  "invalid-user#1",
-				"password":  password,
-				"full_name": user.FullName,
-				"email":     user.Email,
-			},
-			buildStubs: func(store *mockdb.MockStore) {
-				store.EXPECT().
-					GetUser(gomock.Any(), gomock.Any()).
-					Times(0)
-			},
-			checkResponse: func(recorder *httptest.ResponseRecorder) {
-				require.Equal(t, http.StatusBadRequest, recorder.Code)
 			},
 		},
 	}

@@ -8,6 +8,7 @@ import (
 
 	"github.com/Jingqi0327/eleclog/cache"
 	db "github.com/Jingqi0327/eleclog/db/sqlc"
+	"github.com/Jingqi0327/eleclog/pb"
 	token "github.com/Jingqi0327/eleclog/token"
 	"github.com/Jingqi0327/eleclog/util"
 	"github.com/gin-contrib/cors"
@@ -17,15 +18,16 @@ import (
 )
 
 type Server struct {
-	store      db.Store
-	cache      cache.Cache
-	router     *gin.Engine
-	config     util.Config
-	tokenMaker token.Maker
-	srv        *http.Server
+	store       db.Store
+	cache       cache.Cache
+	router      *gin.Engine
+	config      util.Config
+	tokenMaker  token.Maker
+	srv         *http.Server
+	proxyClient pb.ProxyServiceClient
 }
 
-func NewServer(config util.Config, store db.Store, c cache.Cache) (*Server, error) {
+func NewServer(config util.Config, store db.Store, c cache.Cache, proxyClient pb.ProxyServiceClient) (*Server, error) {
 	gin.SetMode(gin.ReleaseMode)
 	tokenMaker, err := token.NewPasetoMaker(config.TokenSymmetricKey)
 	if err != nil {
@@ -35,8 +37,9 @@ func NewServer(config util.Config, store db.Store, c cache.Cache) (*Server, erro
 	server := &Server{
 		store:      store,
 		cache:      c,
-		config:     config,
-		tokenMaker: tokenMaker,
+		config:      config,
+		tokenMaker:  tokenMaker,
+		proxyClient: proxyClient,
 	}
 
 	// 注册验证器
@@ -111,6 +114,8 @@ func (server *Server) setupRouter() {
 
 	server.router = router
 }
+
+
 
 // 启动服务器
 func (server *Server) Start(address string) error {

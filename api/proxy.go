@@ -1,20 +1,20 @@
 package api
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
 
+	"github.com/Jingqi0327/eleclog/pb"
 	"github.com/gin-gonic/gin"
-	"github.com/go-resty/resty/v2"
+	"google.golang.org/grpc/metadata"
 )
 
-const xiaofubaoBase = "https://application.xiaofubao.com/app/electric/"
-
-func (server *Server) newRestyClient() *resty.Client {
-	return resty.New().
-		SetHeader("Cookie", fmt.Sprintf("shiroJID=%s", server.config.ShiroJID)).
-		SetHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36")
+func (server *Server) getGrpcContext(ctx *gin.Context) context.Context {
+	authHeader := ctx.GetHeader(authorizationHeaderKey)
+	return metadata.AppendToOutgoingContext(ctx, authorizationHeaderKey, authHeader)
 }
 
 // proxyQueryArea GET /proxy/areas
@@ -30,16 +30,17 @@ func (server *Server) proxyQueryArea(ctx *gin.Context) {
 		}
 	}
 
-	resp, err := server.newRestyClient().R().
-		SetQueryParams(map[string]string{
-			"platform": "YUNMA_APP",
-			"type":     "1",
-		}).
-		SetResult(&result).
-		Get(xiaofubaoBase + "queryArea")
+	// 发起 gRPC 调用，传入带有 auth header 的 context
+	grpcCtx := server.getGrpcContext(ctx)
+	resp, err := server.proxyClient.QueryArea(grpcCtx, &pb.QueryAreaRequest{})
+	if err != nil {
+		ctx.JSON(http.StatusBadGateway, gin.H{"error": "代理微服务请求失败"})
+		return
+	}
 
-	if err != nil || !resp.IsSuccess() {
-		ctx.JSON(http.StatusBadGateway, gin.H{"error": "上游请求失败"})
+	// 解析返回的 JSON 字符串
+	if err := json.Unmarshal([]byte(resp.JsonData), &result); err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "代理服务返回数据格式错误"})
 		return
 	}
 
@@ -51,6 +52,7 @@ func (server *Server) proxyQueryArea(ctx *gin.Context) {
 }
 
 // proxyQueryBuilding GET /proxy/buildings?areaId=xxx
+// 获取楼栋列表（参数：校区id）
 func (server *Server) proxyQueryBuilding(ctx *gin.Context) {
 	areaId := ctx.Query("areaId")
 	if areaId == "" {
@@ -68,16 +70,18 @@ func (server *Server) proxyQueryBuilding(ctx *gin.Context) {
 		}
 	}
 
-	resp, err := server.newRestyClient().R().
-		SetQueryParams(map[string]string{
-			"platform": "YUNMA_APP",
-			"areaId":   areaId,
-		}).
-		SetResult(&result).
-		Get(xiaofubaoBase + "queryBuilding")
+	// 发起 gRPC 调用，传入带有 auth header 的 context
+	grpcCtx := server.getGrpcContext(ctx)
+	resp, err := server.proxyClient.QueryBuilding(grpcCtx, &pb.QueryBuildingRequest{
+		AreaId: areaId,
+	})
+	if err != nil {
+		ctx.JSON(http.StatusBadGateway, gin.H{"error": "代理微服务请求失败"})
+		return
+	}
 
-	if err != nil || !resp.IsSuccess() {
-		ctx.JSON(http.StatusBadGateway, gin.H{"error": "上游请求失败"})
+	if err := json.Unmarshal([]byte(resp.JsonData), &result); err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "代理服务返回数据格式错误"})
 		return
 	}
 
@@ -89,6 +93,7 @@ func (server *Server) proxyQueryBuilding(ctx *gin.Context) {
 }
 
 // proxyQueryFloor GET /proxy/floors?areaId=xxx&buildingCode=xxx
+// 获取楼层列表（参数：校区id、楼栋编号）
 func (server *Server) proxyQueryFloor(ctx *gin.Context) {
 	areaId := ctx.Query("areaId")
 	buildingCode := ctx.Query("buildingCode")
@@ -107,17 +112,19 @@ func (server *Server) proxyQueryFloor(ctx *gin.Context) {
 		}
 	}
 
-	resp, err := server.newRestyClient().R().
-		SetQueryParams(map[string]string{
-			"platform":     "YUNMA_APP",
-			"areaId":       areaId,
-			"buildingCode": buildingCode,
-		}).
-		SetResult(&result).
-		Get(xiaofubaoBase + "queryFloor")
+	// 发起 gRPC 调用，传入带有 auth header 的 context
+	grpcCtx := server.getGrpcContext(ctx)
+	resp, err := server.proxyClient.QueryFloor(grpcCtx, &pb.QueryFloorRequest{
+		AreaId:       areaId,
+		BuildingCode: buildingCode,
+	})
+	if err != nil {
+		ctx.JSON(http.StatusBadGateway, gin.H{"error": "代理微服务请求失败"})
+		return
+	}
 
-	if err != nil || !resp.IsSuccess() {
-		ctx.JSON(http.StatusBadGateway, gin.H{"error": "上游请求失败"})
+	if err := json.Unmarshal([]byte(resp.JsonData), &result); err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "代理服务返回数据格式错误"})
 		return
 	}
 
@@ -129,6 +136,7 @@ func (server *Server) proxyQueryFloor(ctx *gin.Context) {
 }
 
 // proxyQueryRoom GET /proxy/rooms?areaId=xxx&buildingCode=xxx&floorCode=xxx
+// 获取寝室列表（参数：校区id、楼栋编号、楼层编号）
 func (server *Server) proxyQueryRoom(ctx *gin.Context) {
 	areaId := ctx.Query("areaId")
 	buildingCode := ctx.Query("buildingCode")
@@ -148,18 +156,20 @@ func (server *Server) proxyQueryRoom(ctx *gin.Context) {
 		}
 	}
 
-	resp, err := server.newRestyClient().R().
-		SetQueryParams(map[string]string{
-			"platform":     "YUNMA_APP",
-			"areaId":       areaId,
-			"buildingCode": buildingCode,
-			"floorCode":    floorCode,
-		}).
-		SetResult(&result).
-		Get(xiaofubaoBase + "queryRoom")
+	// 发起 gRPC 调用，传入带有 auth header 的 context
+	grpcCtx := server.getGrpcContext(ctx)
+	resp, err := server.proxyClient.QueryRoom(grpcCtx, &pb.QueryRoomRequest{
+		AreaId:       areaId,
+		BuildingCode: buildingCode,
+		FloorCode:    floorCode,
+	})
+	if err != nil {
+		ctx.JSON(http.StatusBadGateway, gin.H{"error": "代理微服务请求失败"})
+		return
+	}
 
-	if err != nil || !resp.IsSuccess() {
-		ctx.JSON(http.StatusBadGateway, gin.H{"error": "上游请求失败"})
+	if err := json.Unmarshal([]byte(resp.JsonData), &result); err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "代理服务返回数据格式错误"})
 		return
 	}
 
@@ -183,20 +193,24 @@ func (server *Server) proxyQueryRoomSurplus(ctx *gin.Context) {
 	}
 
 	var result interface{}
-	resp, err := server.newRestyClient().R().
-		SetQueryParams(map[string]string{
-			"platform":     "YUNMA_APP",
-			"areaId":       areaId,
-			"buildingCode": buildingCode,
-			"floorCode":    floorCode,
-			"roomCode":     roomCode,
-		}).
-		SetResult(&result).
-		Post(xiaofubaoBase + "queryRoomSurplus")
 
-	if err != nil || !resp.IsSuccess() {
-		ctx.JSON(http.StatusBadGateway, gin.H{"error": "上游请求失败"})
+	// 发起 gRPC 调用，传入带有 auth header 的 context
+	grpcCtx := server.getGrpcContext(ctx)
+	resp, err := server.proxyClient.QueryRoomSurplus(grpcCtx, &pb.QueryRoomSurplusRequest{
+		AreaId:       areaId,
+		BuildingCode: buildingCode,
+		FloorCode:    floorCode,
+		RoomCode:     roomCode,
+	})
+	if err != nil {
+		ctx.JSON(http.StatusBadGateway, gin.H{"error": "代理微服务请求失败"})
 		return
 	}
+
+	if err := json.Unmarshal([]byte(resp.JsonData), &result); err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "代理服务返回数据格式错误"})
+		return
+	}
+
 	ctx.JSON(http.StatusOK, result)
 }

@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package pb;
+
+option go_package = "github.com/Jingqi0327/eleclog/pb";
+
+message QueryAreaRequest {
+    // 调用方不需要传参数，参数由代理层固定
+}
+
+message QueryAreaResponse {
+    string json_data = 1; // 原始的 JSON 字符串
+}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -12,8 +13,10 @@ import (
 	"github.com/Jingqi0327/eleclog/api"
 	"github.com/Jingqi0327/eleclog/cache"
 	db "github.com/Jingqi0327/eleclog/db/sqlc"
+	"github.com/Jingqi0327/eleclog/gapi"
 	"github.com/Jingqi0327/eleclog/logger"
 	"github.com/Jingqi0327/eleclog/mail"
+	"github.com/Jingqi0327/eleclog/pb"
 	"github.com/Jingqi0327/eleclog/util"
 	"github.com/Jingqi0327/eleclog/worker"
 	"github.com/golang-migrate/migrate/v4"
@@ -25,6 +28,9 @@ import (
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/reflection"
 )
 
 // 定义停机信号列表，包含常见的中断信号
@@ -75,19 +81,34 @@ func main() {
 	defer stop()
 	waitGroup, ctx := errgroup.WithContext(ctx)
 
+	proxyClient, cleanupProxy, err := createProxyClient(config)
+	if err != nil {
+		logger.Log.Fatal("[System] Cannot create proxy client:", zap.Error(err))
+	}
+	defer cleanupProxy()
+
 	switch config.RunMode {
 	case "backend":
 		logger.Log.Info("[System] Running in backend mode, skipping collector and mail alerter...")
-		runGinServer(waitGroup, ctx, config, store, redisCache)
+		runGinServer(waitGroup, ctx, config, store, redisCache, proxyClient)
 	case "worker":
 		logger.Log.Info("[System] Running in worker mode, skipping API server...")
 		runTaskScheduler(waitGroup, ctx, config, redisOpt)
-		runTaskProcessor(waitGroup, ctx, config, redisOpt, store, taskDistributor)
+		runTaskProcessor(waitGroup, ctx, config, redisOpt, store, taskDistributor, proxyClient)
+	case "proxy":
+		logger.Log.Info("[System] Running in proxy mode...")
+		runGrpcServer(waitGroup, ctx, config)
+	case "main":
+		logger.Log.Info("[System] Running in main mode...")
+		runTaskScheduler(waitGroup, ctx, config, redisOpt)
+		runTaskProcessor(waitGroup, ctx, config, redisOpt, store, taskDistributor, proxyClient)
+		runGinServer(waitGroup, ctx, config, store, redisCache, proxyClient)
 	default:
 		logger.Log.Info("[System] Running in full mode, starting API server, mail alerter...")
 		runTaskScheduler(waitGroup, ctx, config, redisOpt)
-		runTaskProcessor(waitGroup, ctx, config, redisOpt, store, taskDistributor)
-		runGinServer(waitGroup, ctx, config, store, redisCache)
+		runTaskProcessor(waitGroup, ctx, config, redisOpt, store, taskDistributor, proxyClient)
+		runGinServer(waitGroup, ctx, config, store, redisCache, proxyClient)
+		runGrpcServer(waitGroup, ctx, config)
 	}
 
 	err = waitGroup.Wait()
@@ -97,8 +118,8 @@ func main() {
 	logger.Log.Info("[System] All processes have stopped")
 }
 
-func runGinServer(waitGroup *errgroup.Group, ctx context.Context, config util.Config, store db.Store, redisCache cache.Cache) {
-	server, err := api.NewServer(config, store, redisCache)
+func runGinServer(waitGroup *errgroup.Group, ctx context.Context, config util.Config, store db.Store, redisCache cache.Cache, proxyClient pb.ProxyServiceClient) {
+	server, err := api.NewServer(config, store, redisCache, proxyClient)
 	if err != nil {
 		logger.Log.Fatal("[Server] Cannot create server:", zap.Error(err))
 	}
@@ -174,6 +195,7 @@ func runTaskProcessor(
 	redisOpt asynq.RedisClientOpt,
 	store db.Store,
 	taskDistributor worker.TaskDistributor,
+	proxyClient pb.ProxyServiceClient,
 ) {
 	mailer := mail.NewQQmailSender(config.EmailSenderName, config.EmailSenderAddress, config.EmailSenderPassword)
 	redisTaskDistributor, ok := taskDistributor.(*worker.RedisTaskDistributor)
@@ -181,10 +203,14 @@ func runTaskProcessor(
 		logger.Log.Fatal("[Processor] TaskDistributor is not a RedisTaskDistributor")
 		return
 	}
-	taskProcessor := worker.NewRedisTaskProcessor(redisOpt, store, mailer, redisTaskDistributor, config)
+	taskProcessor, err := worker.NewRedisTaskProcessor(redisOpt, store, mailer, redisTaskDistributor, config, proxyClient)
+	if err != nil {
+		logger.Log.Fatal("[Processor] Cannot create task processor", zap.Error(err))
+		return
+	}
 
 	logger.Log.Info("[Processor] Starting task processor...")
-	err := taskProcessor.Start()
+	err = taskProcessor.Start()
 	if err != nil {
 		logger.Log.Fatal("[Processor] Cannot start task processor", zap.Error(err))
 		return
@@ -198,6 +224,74 @@ func runTaskProcessor(
 		logger.Log.Info("[Processor] Task processor stopped successfully")
 		return nil
 	})
+}
+
+func runGrpcServer(waitGroup *errgroup.Group, ctx context.Context, config util.Config) {
+	server, err := gapi.NewServer(config)
+	if err != nil {
+		logger.Log.Fatal("[GRPC] Cannot create server:", zap.Error(err))
+	}
+
+	grpcLogger := grpc.UnaryInterceptor(gapi.GrpcLogger)
+	grpcServer := grpc.NewServer(grpcLogger)
+
+	pb.RegisterProxyServiceServer(grpcServer, server)
+
+	reflection.Register(grpcServer)
+
+	listener, err := net.Listen("tcp", config.GrpcServerAddress)
+	if err != nil {
+		logger.Log.Fatal("[GRPC] Cannot create listener", zap.Error(err))
+	}
+
+	// 6. 启动服务器（阻塞调用）
+	waitGroup.Go(func() error {
+		logger.Log.Info("[GRPC] Starting gRPC server...")
+
+		err = grpcServer.Serve(listener)
+		if err != nil {
+			if errors.Is(err, grpc.ErrServerStopped) {
+				return nil
+			}
+			logger.Log.Fatal("[GRPC] Cannot serve gRPC server", zap.Error(err))
+			return err
+		}
+
+		return nil
+	})
+
+	// 7. 等待停机信号，并优雅地关闭服务器
+	waitGroup.Go(func() error {
+		<-ctx.Done()
+		logger.Log.Info("[GRPC] Graceful shutdown gRPC server...")
+		grpcServer.GracefulStop()
+		logger.Log.Info("[GRPC] gRPC server stopped successfully")
+		return nil
+	})
+
+}
+
+// createProxyClient 辅助函数，返回 client 和用于释放连接的 cleanup 函数
+func createProxyClient(config util.Config) (pb.ProxyServiceClient, func(), error) {
+	if config.RunMode == "proxy" {
+		return nil, func() {}, nil
+	}
+	conn, err := grpc.NewClient(
+		config.ProxygRPCAddress,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	client := pb.NewProxyServiceClient(conn)
+
+	cleanup := func() {
+		logger.Log.Info("[GRPC] Closing proxy client connection...")
+		conn.Close()
+	}
+
+	return client, cleanup, nil
 }
 
 func initDefaultUser(config util.Config, store db.Store) {

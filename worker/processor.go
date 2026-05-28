@@ -3,10 +3,13 @@ package worker
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	db "github.com/Jingqi0327/eleclog/db/sqlc"
 	"github.com/Jingqi0327/eleclog/logger"
 	"github.com/Jingqi0327/eleclog/mail"
+	"github.com/Jingqi0327/eleclog/pb"
+	"github.com/Jingqi0327/eleclog/token"
 	"github.com/Jingqi0327/eleclog/util"
 	"github.com/go-resty/resty/v2"
 	"github.com/hibiken/asynq"
@@ -30,6 +33,8 @@ type RedisTaskProcessor struct {
 	distributor *RedisTaskDistributor
 	config      util.Config
 	client      *resty.Client
+	proxyClient pb.ProxyServiceClient
+	tokenMaker  token.Maker
 }
 
 func NewRedisTaskProcessor(
@@ -38,7 +43,13 @@ func NewRedisTaskProcessor(
 	emailSender mail.EmailSender,
 	taskDistributor *RedisTaskDistributor,
 	config util.Config,
-) TaskProcessor {
+	proxyClient pb.ProxyServiceClient,
+) (TaskProcessor, error) {
+	tokenMaker, err := token.NewPasetoMaker(config.TokenSymmetricKey)
+	if err != nil {
+		return nil, fmt.Errorf("cannot create token maker: %w", err)
+	}
+
 	server := asynq.NewServer(
 		redisOpt,
 		asynq.Config{
@@ -69,7 +80,9 @@ func NewRedisTaskProcessor(
 		distributor: taskDistributor,
 		config:      config,
 		client:      resty.New(),
-	}
+		proxyClient: proxyClient,
+		tokenMaker:  tokenMaker,
+	}, nil
 }
 
 func (processor *RedisTaskProcessor) Start() error {

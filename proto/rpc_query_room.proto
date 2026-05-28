@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package pb;
+
+option go_package = "github.com/Jingqi0327/eleclog/pb";
+
+message QueryRoomRequest {
+    string area_id = 1;
+    string building_code = 2;
+    string floor_code = 3;
+}
+
+message QueryRoomResponse {
+    string json_data = 1; // 原始的 JSON 字符串
+}

@@ -4,12 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	db "github.com/Jingqi0327/eleclog/db/sqlc"
 	"github.com/Jingqi0327/eleclog/logger"
+	"github.com/Jingqi0327/eleclog/pb"
 	"github.com/Jingqi0327/eleclog/util"
 	"github.com/hibiken/asynq"
 	"go.uber.org/zap"
+	"google.golang.org/grpc/metadata"
 )
 
 const TaskFetchSurplusAndStore = "task:fetch_surplus_and_store"
@@ -81,33 +84,39 @@ type SurplusResponse struct {
 }
 
 func (processor *RedisTaskProcessor) fetchSurplus(areaID, buildingCode, floorCode, roomCode string) (float64, error) {
-	apiURL := "https://application.xiaofubao.com/app/electric/queryRoomSurplus"
-
-	var result SurplusResponse
-	resp, err := processor.client.R().
-		SetHeader("Content-Type", "application/json").
-		SetHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36").
-		SetHeader("Cookie", fmt.Sprintf("shiroJID=%s", processor.config.ShiroJID)).
-		SetQueryParams(map[string]string{
-			"platform":     "YUNMA_APP",
-			"areaId":       areaID,
-			"buildingCode": buildingCode,
-			"floorCode":    floorCode,
-			"roomCode":     roomCode,
-		}).
-		SetResult(&result). // 自动将 JSON 解析到 struct
-		Post(apiURL)
-
+	// 签发临时 Token
+	accessToken, _, err := processor.tokenMaker.CreateToken(
+		"system_worker",
+		util.AdminRole,
+		time.Minute,
+	)
 	if err != nil {
-		return 0, fmt.Errorf("请求失败: %v", err)
+		return 0, err
 	}
 
-	if !resp.IsSuccess() {
-		return 0, fmt.Errorf("接口返回错误代码: %d", resp.StatusCode())
+	// 组装 Header
+	authHeader := fmt.Sprintf("bearer %s", accessToken)
+	grpcCtx := metadata.AppendToOutgoingContext(context.Background(), "authorization", authHeader)
+
+	// 请求 gRPC 代理
+	resp, err := processor.proxyClient.QueryRoomSurplus(grpcCtx, &pb.QueryRoomSurplusRequest{
+		AreaId:       areaID,
+		BuildingCode: buildingCode,
+		FloorCode:    floorCode,
+		RoomCode:     roomCode,
+	})
+	if err != nil {
+		return 0, fmt.Errorf("gRPC proxy request failed: %w", err)
+	}
+
+	// 解析结果
+	var result SurplusResponse
+	if err := json.Unmarshal([]byte(resp.JsonData), &result); err != nil {
+		return 0, err
 	}
 
 	if !result.Success {
-		return 0, fmt.Errorf("接口返回失败: %v", result)
+		return 0, fmt.Errorf("gRPC proxy request failed: %v", result)
 	}
 
 	return result.Data.Amount, nil
