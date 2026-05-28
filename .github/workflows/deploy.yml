@@ -56,6 +56,8 @@ jobs:
         echo 'DETECT_LOW_BALANCE_CRON="10 * * * *"' >> app.env
         echo 'FETCH_SURPLUS_CRON="5 * * * *"' >> app.env
         echo 'FRONTEND_ORIGIN=${{ secrets.FRONTEND_ORIGIN }}' >> app.env
+        echo 'PROXY_GRPC_ADDRESS=${{secrets.PROXY_GRPC_ADDRESS}}' >> app.env
+        echo 'GRPC_SERVER_ADDRESS=${{secrets.GRPC_SERVER_ADDRESS}}' >> app.env
 
     # 4. 配置 QEMU (必须项：用于支持后面的 arm64 跨架构构建)
     - name: Set up QEMU
@@ -107,9 +109,11 @@ jobs:
         # 使用 sed 命令，把 yaml 里的 latest 临时替换成这次真实的 commit hash，确保部署的就是我们刚构建并推送的镜像
         sed -i "s|ghcr.io/jingqi0327/eleclog:latest|ghcr.io/jingqi0327/eleclog:${IMAGE_TAG}|g" k8s/deployment-api.yaml
         sed -i "s|ghcr.io/jingqi0327/eleclog:latest|ghcr.io/jingqi0327/eleclog:${IMAGE_TAG}|g" k8s/deployment-worker.yaml
+        sed -i "s|ghcr.io/jingqi0327/eleclog:latest|ghcr.io/jingqi0327/eleclog:${IMAGE_TAG}|g" k8s/deployment-proxy.yaml
 
         kubectl apply -f k8s/deployment-api.yaml --validate=false 
         kubectl apply -f k8s/deployment-worker.yaml --validate=false
+        kubectl apply -f k8s/deployment-proxy.yaml --validate=false
         kubectl apply -f k8s/service.yaml --validate=false
         # kubectl apply -f eks/ingress.yaml --validate=false
         # kubectl apply -f eks/issuer.yaml --validate=false

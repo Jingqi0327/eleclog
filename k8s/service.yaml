@@ -10,6 +10,10 @@ spec:
       protocol: TCP     # 传输层协议，后端 API 通常都是 TCP
       port: 6060          # Service 暴露的端口（外界访问的端口，通常设为 80 或 443）
       targetPort: 6060  # Pod 内部程序监听的端口（你的 Go 代码中 Listen 的端口）
+    - name: grpc
+      protocol: TCP
+      port: 7070
+      targetPort: 7070
   type: LoadBalancer       # 【关键】服务类型：
                         # ClusterIP（默认）：只能在集群内部访问，适合微服务之间通信
                         # LoadBalancer的话，在你的环境下，MetalLB 会看到这个类型，并从 IP 池里拨一个 IP 

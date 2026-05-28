@@ -248,6 +248,7 @@ func runGrpcServer(waitGroup *errgroup.Group, ctx context.Context, config util.C
 	waitGroup.Go(func() error {
 		logger.Log.Info("[GRPC] Starting gRPC server...")
 
+		logger.Log.Info("[GRPC] Listener: ", zap.String("listener", listener.Addr().String()))
 		err = grpcServer.Serve(listener)
 		if err != nil {
 			if errors.Is(err, grpc.ErrServerStopped) {
@@ -284,6 +285,7 @@ func createProxyClient(config util.Config) (pb.ProxyServiceClient, func(), error
 		return nil, nil, err
 	}
 
+	logger.Log.Info("[GRPC] Proxy client connected", zap.String("address", config.ProxygRPCAddress))
 	client := pb.NewProxyServiceClient(conn)
 
 	cleanup := func() {
