@@ -29,6 +29,7 @@ import (
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/reflection"
 )
 
@@ -80,27 +81,33 @@ func main() {
 	defer stop()
 	waitGroup, ctx := errgroup.WithContext(ctx)
 
+	proxyClient, cleanupProxy, err := createProxyClient(config)
+	if err != nil {
+		logger.Log.Fatal("[System] Cannot create proxy client:", zap.Error(err))
+	}
+	defer cleanupProxy()
+
 	switch config.RunMode {
 	case "backend":
 		logger.Log.Info("[System] Running in backend mode, skipping collector and mail alerter...")
-		runGinServer(waitGroup, ctx, config, store, redisCache)
+		runGinServer(waitGroup, ctx, config, store, redisCache, proxyClient)
 	case "worker":
 		logger.Log.Info("[System] Running in worker mode, skipping API server...")
 		runTaskScheduler(waitGroup, ctx, config, redisOpt)
-		runTaskProcessor(waitGroup, ctx, config, redisOpt, store, taskDistributor)
+		runTaskProcessor(waitGroup, ctx, config, redisOpt, store, taskDistributor, proxyClient)
 	case "proxy":
 		logger.Log.Info("[System] Running in proxy mode...")
 		runGrpcServer(waitGroup, ctx, config)
 	case "main":
 		logger.Log.Info("[System] Running in main mode...")
 		runTaskScheduler(waitGroup, ctx, config, redisOpt)
-		runTaskProcessor(waitGroup, ctx, config, redisOpt, store, taskDistributor)
-		runGinServer(waitGroup, ctx, config, store, redisCache)
+		runTaskProcessor(waitGroup, ctx, config, redisOpt, store, taskDistributor, proxyClient)
+		runGinServer(waitGroup, ctx, config, store, redisCache, proxyClient)
 	default:
 		logger.Log.Info("[System] Running in full mode, starting API server, mail alerter...")
 		runTaskScheduler(waitGroup, ctx, config, redisOpt)
-		runTaskProcessor(waitGroup, ctx, config, redisOpt, store, taskDistributor)
-		runGinServer(waitGroup, ctx, config, store, redisCache)
+		runTaskProcessor(waitGroup, ctx, config, redisOpt, store, taskDistributor, proxyClient)
+		runGinServer(waitGroup, ctx, config, store, redisCache, proxyClient)
 		runGrpcServer(waitGroup, ctx, config)
 	}
 
@@ -111,8 +118,8 @@ func main() {
 	logger.Log.Info("[System] All processes have stopped")
 }
 
-func runGinServer(waitGroup *errgroup.Group, ctx context.Context, config util.Config, store db.Store, redisCache cache.Cache) {
-	server, err := api.NewServer(config, store, redisCache)
+func runGinServer(waitGroup *errgroup.Group, ctx context.Context, config util.Config, store db.Store, redisCache cache.Cache, proxyClient pb.ProxyServiceClient) {
+	server, err := api.NewServer(config, store, redisCache, proxyClient)
 	if err != nil {
 		logger.Log.Fatal("[Server] Cannot create server:", zap.Error(err))
 	}
@@ -188,6 +195,7 @@ func runTaskProcessor(
 	redisOpt asynq.RedisClientOpt,
 	store db.Store,
 	taskDistributor worker.TaskDistributor,
+	proxyClient pb.ProxyServiceClient,
 ) {
 	mailer := mail.NewQQmailSender(config.EmailSenderName, config.EmailSenderAddress, config.EmailSenderPassword)
 	redisTaskDistributor, ok := taskDistributor.(*worker.RedisTaskDistributor)
@@ -195,10 +203,14 @@ func runTaskProcessor(
 		logger.Log.Fatal("[Processor] TaskDistributor is not a RedisTaskDistributor")
 		return
 	}
-	taskProcessor := worker.NewRedisTaskProcessor(redisOpt, store, mailer, redisTaskDistributor, config)
+	taskProcessor, err := worker.NewRedisTaskProcessor(redisOpt, store, mailer, redisTaskDistributor, config, proxyClient)
+	if err != nil {
+		logger.Log.Fatal("[Processor] Cannot create task processor", zap.Error(err))
+		return
+	}
 
 	logger.Log.Info("[Processor] Starting task processor...")
-	err := taskProcessor.Start()
+	err = taskProcessor.Start()
 	if err != nil {
 		logger.Log.Fatal("[Processor] Cannot start task processor", zap.Error(err))
 		return
@@ -215,12 +227,12 @@ func runTaskProcessor(
 }
 
 func runGrpcServer(waitGroup *errgroup.Group, ctx context.Context, config util.Config) {
-	server,err := gapi.NewServer(config)
+	server, err := gapi.NewServer(config)
 	if err != nil {
 		logger.Log.Fatal("[GRPC] Cannot create server:", zap.Error(err))
 	}
 
-	grpcLogger:=grpc.UnaryInterceptor(gapi.GrpcLogger)
+	grpcLogger := grpc.UnaryInterceptor(gapi.GrpcLogger)
 	grpcServer := grpc.NewServer(grpcLogger)
 
 	pb.RegisterProxyServiceServer(grpcServer, server)
@@ -257,6 +269,29 @@ func runGrpcServer(waitGroup *errgroup.Group, ctx context.Context, config util.C
 		return nil
 	})
 
+}
+
+// createProxyClient 辅助函数，返回 client 和用于释放连接的 cleanup 函数
+func createProxyClient(config util.Config) (pb.ProxyServiceClient, func(), error) {
+	if config.RunMode == "proxy" {
+		return nil, func() {}, nil
+	}
+	conn, err := grpc.NewClient(
+		config.ProxygRPCAddress,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	client := pb.NewProxyServiceClient(conn)
+
+	cleanup := func() {
+		logger.Log.Info("[GRPC] Closing proxy client connection...")
+		conn.Close()
+	}
+
+	return client, cleanup, nil
 }
 
 func initDefaultUser(config util.Config, store db.Store) {

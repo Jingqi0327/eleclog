@@ -15,8 +15,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
 	"github.com/go-playground/validator/v10"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
 type Server struct {
@@ -26,11 +24,10 @@ type Server struct {
 	config      util.Config
 	tokenMaker  token.Maker
 	srv         *http.Server
-	proxyConn   *grpc.ClientConn
 	proxyClient pb.ProxyServiceClient
 }
 
-func NewServer(config util.Config, store db.Store, c cache.Cache) (*Server, error) {
+func NewServer(config util.Config, store db.Store, c cache.Cache, proxyClient pb.ProxyServiceClient) (*Server, error) {
 	gin.SetMode(gin.ReleaseMode)
 	tokenMaker, err := token.NewPasetoMaker(config.TokenSymmetricKey)
 	if err != nil {
@@ -40,13 +37,9 @@ func NewServer(config util.Config, store db.Store, c cache.Cache) (*Server, erro
 	server := &Server{
 		store:      store,
 		cache:      c,
-		config:     config,
-		tokenMaker: tokenMaker,
-	}
-
-	err = setupProxyClient(server)
-	if err != nil {
-		return nil, fmt.Errorf("fail to setup proxy client: %w", err)
+		config:      config,
+		tokenMaker:  tokenMaker,
+		proxyClient: proxyClient,
 	}
 
 	// 注册验证器
@@ -122,20 +115,7 @@ func (server *Server) setupRouter() {
 	server.router = router
 }
 
-func setupProxyClient(server *Server) error {
-	conn, err := grpc.NewClient(
-		server.config.ProxygRPCAddress,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	if err != nil {
-		return err
-	}
 
-	server.proxyConn = conn
-	server.proxyClient = pb.NewProxyServiceClient(conn)
-
-	return nil
-}
 
 // 启动服务器
 func (server *Server) Start(address string) error {
@@ -147,9 +127,6 @@ func (server *Server) Start(address string) error {
 }
 
 func (server *Server) Shutdown(ctx context.Context) error {
-	if server.proxyConn != nil {
-		server.proxyConn.Close()
-	}
 	return server.srv.Shutdown(ctx)
 }
 
