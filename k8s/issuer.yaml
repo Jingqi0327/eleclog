@@ -1,0 +1,16 @@
+apiVersion: cert-manager.io/v1 # cert-manager 的核心 API 版本
+kind: ClusterIssuer            # 资源类型：集群级发行者（全集群命名空间通用）
+metadata:
+  name: letsencrypt            # 你的发行者名称，后续在 Ingress 中引用此名
+spec:
+  acme:                        # 使用 ACME 协议（证书自动管理环境）
+    email: weiliang_rumeng@163.com # 【核心】注册邮箱，用于接收 Let's Encrypt 的证书过期或安全警告
+    server: https://acme-v02.api.letsencrypt.org/directory # Let's Encrypt 生产环境接口地址
+    # 定义存放 ACME 帐户私钥的 Secret 资源
+    privateKeySecretRef:       
+      name: letsencrypt-account-private-key # 该 Secret 会被自动创建并保存在 cert-manager 命名空间
+    # 定义如何证明你拥有该域名（挑战验证方式）
+    solvers:                   
+    - http01:                  # 使用 HTTP-01 挑战（通过 80 端口验证）
+        ingress:
+          ingressClassName: traefik # 【关键】指定由哪个 Ingress 控制器（你装的 Nginx）来接收验证请求

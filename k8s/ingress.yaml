@@ -9,21 +9,26 @@ spec:
       - /api
 
 ---
-# 2. 定义统一的 Ingress (同时接管前端和后端流量)
+# 2. 定义统一的 Ingress (同时接管前端和后端流量，并配置 HTTPS)
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: eleclog-ingress
   annotations:
-    # 告诉 Traefik 使用上面定义的 Middleware（格式为： 命名空间-名称@kubernetescrd）
-    # 假设您的资源部署在 default 命名空间，如果是其他命名空间，请替换 default 为真实的命名空间
+    # 挂载剥离前缀的中间件
     traefik.ingress.kubernetes.io/router.middlewares: default-strip-api-prefix@kubernetescrd
+    # 告诉 cert-manager 使用我们刚定义的 ClusterIssuer 来申请证书
+    cert-manager.io/cluster-issuer: "letsencrypt"
 spec:
+  ingressClassName: traefik # 【正确】指定使用 Traefik，这是现在的标准做法
+  tls:
+  - hosts:
+    - "elec.weiliang-rumeng.top"
+    secretName: eleclog-tls-cert # cert-manager 申请成功后，证书会自动存入这个 Secret 里
   rules:
-  - host: "elec.weiliang-rumeng.top" # 统一使用这一个域名
+  - host: "elec.weiliang-rumeng.top"
     http:
       paths:
-      # 【第一条规则】拦截所有 /api 开头的请求，剥离 /api 后转发给后端
       - pathType: Prefix
         path: "/api"
         backend:
@@ -31,8 +36,6 @@ spec:
             name: eleclog-api-service
             port:
               number: 6060
-              
-      # 【第二条规则】其他所有请求，转发给前端 Nginx 容器（Nginx 返回静态网页）
       - pathType: Prefix
         path: "/"
         backend:

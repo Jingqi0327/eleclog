@@ -135,4 +135,5 @@ jobs:
         kubectl apply -f k8s/service-frontend.yaml --validate=false
         
         kubectl apply -f k8s/ingress.yaml --validate=false
-        # kubectl apply -f k8s/issuer.yaml --validate=false
+        
+        kubectl apply -f k8s/issuer.yaml --validate=false
