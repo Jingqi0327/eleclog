@@ -90,6 +90,19 @@ jobs:
           -t $REGISTRY/$REPOSITORY:latest \
           --push .
 
+    - name: Build, tag, and push frontend image
+      env:
+        REGISTRY: ghcr.io/jingqi0327
+        REPOSITORY: eleclog-frontend
+        IMAGE_TAG: ${{ github.sha }}
+      run: |
+        cd frontend
+        docker buildx build \
+          --platform linux/amd64,linux/arm64 \
+          -t $REGISTRY/$REPOSITORY:$IMAGE_TAG \
+          -t $REGISTRY/$REPOSITORY:latest \
+          --push .   
+
     # 8. 配置 Kubeconfig 认证信息
     - name: Set up Kubeconfig
       run: |
@@ -110,11 +123,16 @@ jobs:
         sed -i "s|ghcr.io/jingqi0327/eleclog:latest|ghcr.io/jingqi0327/eleclog:${IMAGE_TAG}|g" k8s/deployment-api.yaml
         sed -i "s|ghcr.io/jingqi0327/eleclog:latest|ghcr.io/jingqi0327/eleclog:${IMAGE_TAG}|g" k8s/deployment-worker.yaml
         sed -i "s|ghcr.io/jingqi0327/eleclog:latest|ghcr.io/jingqi0327/eleclog:${IMAGE_TAG}|g" k8s/deployment-proxy.yaml
+        sed -i "s|ghcr.io/jingqi0327/eleclog-frontend:latest|ghcr.io/jingqi0327/eleclog-frontend:${IMAGE_TAG}|g" k8s/deployment-frontend.yaml
 
         kubectl apply -f k8s/deployment-api.yaml --validate=false 
         kubectl apply -f k8s/deployment-worker.yaml --validate=false
         kubectl apply -f k8s/deployment-proxy.yaml --validate=false
+        kubectl apply -f k8s/deployment-frontend.yaml --validate=false
+
         kubectl apply -f k8s/service-api.yaml --validate=false
         kubectl apply -f k8s/service-proxy.yaml --validate=false
-        kubectl apply -f eks/ingress.yaml --validate=false
-        # kubectl apply -f eks/issuer.yaml --validate=false
+        kubectl apply -f k8s/service-frontend.yaml --validate=false
+        
+        kubectl apply -f k8s/ingress.yaml --validate=false
+        # kubectl apply -f k8s/issuer.yaml --validate=false
