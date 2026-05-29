@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: eleclog-frontend
+  labels:
+    app: eleclog-frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: eleclog-frontend
+  template:
+    metadata:
+      labels:
+        app: eleclog-frontend
+    spec:
+      containers:
+      - name: frontend
+        # 这里的镜像地址稍后由 GitHub Actions 动态替换
+        image: ghcr.io/jingqi0327/eleclog-frontend:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 80
+        resources:
+          requests:
+            cpu: "50m"
+            memory: "32Mi"
+          limits:
+            cpu: "200m"
+            memory: "128Mi"
