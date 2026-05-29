@@ -1,16 +1,42 @@
-apiVersion: networking.k8s.io/v1 # 资源版本，Ingress 属于网络 API 组的稳定版
-kind: Ingress                    # 资源类型：入口控制（七层负载均衡）
+# 1. 定义 Traefik 的 Middleware，用于剥离 /api 前缀
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
 metadata:
-  name: eleclog-ingress      # Ingress 对象的名称
+  name: strip-api-prefix
 spec:
-  rules:                         # 定义路由规则列表
-  - host: "api.weiliang-rumeng.top" # 【核心】匹配的域名。只有 Host 头为此值的请求才会被处理
+  stripPrefix:
+    prefixes:
+      - /api
+
+---
+# 2. 定义统一的 Ingress (同时接管前端和后端流量)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: eleclog-ingress
+  annotations:
+    # 告诉 Traefik 使用上面定义的 Middleware（格式为： 命名空间-名称@kubernetescrd）
+    # 假设您的资源部署在 default 命名空间，如果是其他命名空间，请替换 default 为真实的命名空间
+    traefik.ingress.kubernetes.io/router.middlewares: default-strip-api-prefix@kubernetescrd
+spec:
+  rules:
+  - host: "elec.weiliang-rumeng.top" # 统一使用这一个域名
     http:
-      paths:                     # 路径匹配列表
-      - pathType: Prefix         # 匹配类型：前缀匹配（即 path 及其后的所有子路径）
-        path: "/"                # 匹配的 URL 路径
-        backend:                 # 定义后端去向
+      paths:
+      # 【第一条规则】拦截所有 /api 开头的请求，剥离 /api 后转发给后端
+      - pathType: Prefix
+        path: "/api"
+        backend:
           service:
-            name: eleclog-api-service # 【关键】转发给名为此的 Service
+            name: eleclog-api-service
             port:
-              number: 6060         # 转发到 Service 的 6060 端口
+              number: 6060
+              
+      # 【第二条规则】其他所有请求，转发给前端 Nginx 容器（Nginx 返回静态网页）
+      - pathType: Prefix
+        path: "/"
+        backend:
+          service:
+            name: eleclog-frontend-service
+            port:
+              number: 80
