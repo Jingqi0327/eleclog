@@ -116,5 +116,5 @@ jobs:
         kubectl apply -f k8s/deployment-proxy.yaml --validate=false
         kubectl apply -f k8s/service-api.yaml --validate=false
         kubectl apply -f k8s/service-proxy.yaml --validate=false
-        # kubectl apply -f eks/ingress.yaml --validate=false
+        kubectl apply -f eks/ingress.yaml --validate=false
         # kubectl apply -f eks/issuer.yaml --validate=false

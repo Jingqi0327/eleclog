@@ -1,0 +1,16 @@
+apiVersion: networking.k8s.io/v1 # 资源版本，Ingress 属于网络 API 组的稳定版
+kind: Ingress                    # 资源类型：入口控制（七层负载均衡）
+metadata:
+  name: eleclog-ingress      # Ingress 对象的名称
+spec:
+  rules:                         # 定义路由规则列表
+  - host: "api.weiliang-rumeng.top" # 【核心】匹配的域名。只有 Host 头为此值的请求才会被处理
+    http:
+      paths:                     # 路径匹配列表
+      - pathType: Prefix         # 匹配类型：前缀匹配（即 path 及其后的所有子路径）
+        path: "/"                # 匹配的 URL 路径
+        backend:                 # 定义后端去向
+          service:
+            name: eleclog-api-service # 【关键】转发给名为此的 Service
+            port:
+              number: 6060         # 转发到 Service 的 6060 端口
