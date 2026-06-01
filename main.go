@@ -76,6 +76,7 @@ func main() {
 		Addr: config.RedisAddress,
 	})
 	redisCache := cache.NewRedisCache(redisClient)
+	rateLimiter := cache.NewRedisRateLimiter(redisClient)
 
 	ctx, stop := signal.NotifyContext(context.Background(), interruptSignals...)
 	defer stop()
@@ -90,7 +91,7 @@ func main() {
 	switch config.RunMode {
 	case "backend":
 		logger.Log.Info("[System] Running in backend mode, skipping collector and mail alerter...")
-		runGinServer(waitGroup, ctx, config, store, redisCache, proxyClient)
+		runGinServer(waitGroup, ctx, config, store, redisCache, proxyClient, rateLimiter)
 	case "worker":
 		logger.Log.Info("[System] Running in worker mode, skipping API server...")
 		runTaskScheduler(waitGroup, ctx, config, redisOpt)
@@ -102,12 +103,12 @@ func main() {
 		logger.Log.Info("[System] Running in main mode...")
 		runTaskScheduler(waitGroup, ctx, config, redisOpt)
 		runTaskProcessor(waitGroup, ctx, config, redisOpt, store, taskDistributor, proxyClient)
-		runGinServer(waitGroup, ctx, config, store, redisCache, proxyClient)
+		runGinServer(waitGroup, ctx, config, store, redisCache, proxyClient, rateLimiter)
 	default:
 		logger.Log.Info("[System] Running in full mode, starting API server, mail alerter...")
 		runTaskScheduler(waitGroup, ctx, config, redisOpt)
 		runTaskProcessor(waitGroup, ctx, config, redisOpt, store, taskDistributor, proxyClient)
-		runGinServer(waitGroup, ctx, config, store, redisCache, proxyClient)
+		runGinServer(waitGroup, ctx, config, store, redisCache, proxyClient, rateLimiter)
 		runGrpcServer(waitGroup, ctx, config)
 	}
 
@@ -118,8 +119,16 @@ func main() {
 	logger.Log.Info("[System] All processes have stopped")
 }
 
-func runGinServer(waitGroup *errgroup.Group, ctx context.Context, config util.Config, store db.Store, redisCache cache.Cache, proxyClient pb.ProxyServiceClient) {
-	server, err := api.NewServer(config, store, redisCache, proxyClient)
+func runGinServer(
+	waitGroup *errgroup.Group,
+	ctx context.Context,
+	config util.Config,
+	store db.Store,
+	redisCache cache.Cache,
+	proxyClient pb.ProxyServiceClient,
+	rateLimiter cache.RateLimiter,
+) {
+	server, err := api.NewServer(config, store, redisCache, proxyClient, rateLimiter)
 	if err != nil {
 		logger.Log.Fatal("[Server] Cannot create server:", zap.Error(err))
 	}

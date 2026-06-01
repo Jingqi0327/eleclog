@@ -19,7 +19,7 @@ func newTestServer(t *testing.T, store db.Store) *Server {
 		AccessTokenDuration: time.Minute,
 		PricePerKWh:         0.5,
 	}
-	server, err := NewServer(config, store, nil, nil)
+	server, err := NewServer(config, store, nil, nil, nil)
 	require.NoError(t, err)
 
 	return server
