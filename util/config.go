@@ -32,6 +32,8 @@ type Config struct {
 	FetchSurplusCron     string        `mapstructure:"FETCH_SURPLUS_CRON"`
 	FrontendOrigin       string        `mapstructure:"FRONTEND_ORIGIN"`
 	ProxygRPCAddress     string        `mapstructure:"PROXY_GRPC_ADDRESS"`
+	RedisLimiterCapacity int           `mapstructure:"REDIS_LIMITER_CAPACITY"`
+	RedisLimiterRate     float64       `mapstructure:"REDIS_LIMITER_RATE"`
 }
 
 // LoadConfig 从指定路径加载配置文件

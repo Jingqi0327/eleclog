@@ -25,9 +25,10 @@ type Server struct {
 	tokenMaker  token.Maker
 	srv         *http.Server
 	proxyClient pb.ProxyServiceClient
+	rateLimiter cache.RateLimiter
 }
 
-func NewServer(config util.Config, store db.Store, c cache.Cache, proxyClient pb.ProxyServiceClient) (*Server, error) {
+func NewServer(config util.Config, store db.Store, c cache.Cache, proxyClient pb.ProxyServiceClient, rateLimiter cache.RateLimiter) (*Server, error) {
 	gin.SetMode(gin.ReleaseMode)
 	tokenMaker, err := token.NewPasetoMaker(config.TokenSymmetricKey)
 	if err != nil {
@@ -35,11 +36,12 @@ func NewServer(config util.Config, store db.Store, c cache.Cache, proxyClient pb
 	}
 
 	server := &Server{
-		store:      store,
-		cache:      c,
+		store:       store,
+		cache:       c,
 		config:      config,
 		tokenMaker:  tokenMaker,
 		proxyClient: proxyClient,
+		rateLimiter: rateLimiter,
 	}
 
 	// 注册验证器
@@ -78,9 +80,20 @@ func (server *Server) setupRouter() {
 
 	router.Use(GinLogger(), GinRecovery(true))
 
-	userRoutes := router.Group("/").Use(authMiddleware(server), roleMiddleware(util.UserRole, util.ManagerRole, util.AdminRole))
-	managerRoutes := router.Group("/").Use(authMiddleware(server), roleMiddleware(util.ManagerRole, util.AdminRole))
-	adminRoutes := router.Group("/").Use(authMiddleware(server), roleMiddleware(util.AdminRole))
+	authRoutes := router.Group("/")
+	authRoutes.Use(
+		authMiddleware(server),
+		rateLimitMiddleware(server.rateLimiter, server.config.RedisLimiterCapacity, server.config.RedisLimiterRate),
+	)
+
+	userRoutes := authRoutes.Group("/")
+	userRoutes.Use(roleMiddleware(util.UserRole, util.ManagerRole, util.AdminRole))
+
+	managerRoutes := authRoutes.Group("/")
+	managerRoutes.Use(roleMiddleware(util.ManagerRole, util.AdminRole))
+
+	adminRoutes := authRoutes.Group("/")
+	adminRoutes.Use(roleMiddleware(util.AdminRole))
 
 	managerRoutes.POST("/rooms", server.createRoom)
 	adminRoutes.DELETE("/rooms/:id", server.deleteRoom)
@@ -93,7 +106,8 @@ func (server *Server) setupRouter() {
 	userRoutes.POST("/users/rooms/bind", server.bindRoomToUser)
 	managerRoutes.GET("/users", server.ListUsers)
 	managerRoutes.DELETE("/users/:username", server.deleteUser)
-	router.POST("/users/login", server.loginUser)
+	// 针对登录接口单独限流，更严格的限制 (基于 IP，容量 5，每秒 1 次) 防止暴力破解
+	router.POST("/users/login", rateLimitMiddleware(server.rateLimiter, 5, 1), server.loginUser)
 
 	userRoutes.POST("/user-rooms", server.createUserRoom)
 	userRoutes.GET("/user-rooms", server.listUserRooms)
@@ -114,8 +128,6 @@ func (server *Server) setupRouter() {
 
 	server.router = router
 }
-
-
 
 // 启动服务器
 func (server *Server) Start(address string) error {

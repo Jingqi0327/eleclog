@@ -58,6 +58,8 @@ jobs:
         echo 'FRONTEND_ORIGIN=${{ secrets.FRONTEND_ORIGIN }}' >> app.env
         echo 'PROXY_GRPC_ADDRESS=${{secrets.PROXY_GRPC_ADDRESS}}' >> app.env
         echo 'GRPC_SERVER_ADDRESS=${{secrets.GRPC_SERVER_ADDRESS}}' >> app.env
+        echo "REDIS_LIMITER_CAPACITY=${{secrets.REDIS_LIMITER_CAPACITY}}" >> app.env
+        echo "REDIS_LIMITER_RATE=${{secrets.REDIS_LIMITER_RATE}}" >> app.env
 
     # 4. 配置 QEMU (必须项：用于支持后面的 arm64 跨架构构建)
     - name: Set up QEMU
