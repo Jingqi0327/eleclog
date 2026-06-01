@@ -285,7 +285,104 @@ async function init() {
       mode: "range",
       dateFormat: "Y-m-d",
       locale: "zh",
-      maxDate: "today"
+      maxDate: "today",
+      monthSelectorType: "static",
+      onReady: function(selectedDates, dateStr, instance) {
+        instance.monthElements.forEach((curMonthSpan) => {
+          if (curMonthSpan.parentNode.querySelector('.custom-month-arrow')) return;
+
+          curMonthSpan.style.cursor = 'pointer';
+          curMonthSpan.style.display = 'inline-block';
+          
+          const container = curMonthSpan.parentNode;
+          
+          const arrow = document.createElement('span');
+          arrow.className = 'custom-month-arrow';
+          arrow.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle; cursor:pointer; margin-left:4px;"><polyline points="6 9 12 15 18 9"></polyline></svg>';
+          container.insertBefore(arrow, curMonthSpan.nextSibling);
+          
+          const menu = document.createElement('div');
+          menu.className = 'custom-select-menu flatpickr-month-menu';
+          menu.style.maxHeight = '160px';
+          menu.style.minWidth = '80px';
+          menu.style.width = 'max-content'; // Fix width issue
+          menu.style.right = 'auto'; // Fix width issue from global.css
+          menu.style.position = 'absolute';
+          menu.style.zIndex = '999999';
+          menu.style.display = 'none'; // Initially hidden
+          
+          const months = instance.l10n.months.longhand;
+          months.forEach((monthName, idx) => {
+            const item = document.createElement('div');
+            item.className = 'custom-select-item';
+            item.textContent = monthName;
+            item.addEventListener('click', (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              instance.changeMonth(idx, false);
+              menu.style.display = 'none';
+            });
+            menu.appendChild(item);
+          });
+          
+          menu.addEventListener('mousedown', (e) => e.stopPropagation());
+          menu.addEventListener('touchstart', (e) => e.stopPropagation());
+          
+          document.body.appendChild(menu);
+          
+          const toggleMenu = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            document.querySelectorAll('.flatpickr-month-menu').forEach(m => {
+              if (m !== menu) m.style.display = 'none';
+            });
+            
+            if (menu.style.display === 'flex') {
+              menu.style.display = 'none';
+              return;
+            }
+            
+            const rect = curMonthSpan.getBoundingClientRect();
+            menu.style.top = (rect.bottom + window.scrollY + 8) + 'px';
+            menu.style.left = (rect.left + window.scrollX - 10) + 'px';
+            
+            const panelIdx = instance.monthElements.indexOf(curMonthSpan);
+            let panelMonth = instance.currentMonth + panelIdx;
+            let panelYear = instance.currentYear + Math.floor(panelMonth / 12);
+            
+            const maxDate = instance.config.maxDate || new Date();
+            const maxYear = maxDate.getFullYear();
+            const maxMonth = maxDate.getMonth();
+
+            Array.from(menu.children).forEach((child, idx) => {
+              if (panelYear > maxYear || (panelYear === maxYear && idx > maxMonth)) {
+                child.style.display = 'none';
+              } else {
+                child.style.display = 'block';
+              }
+
+              if (child.textContent === curMonthSpan.textContent.trim()) {
+                child.classList.add('selected');
+                setTimeout(() => {
+                  menu.scrollTop = child.offsetTop - menu.clientHeight/2 + child.clientHeight/2;
+                }, 10);
+              } else {
+                child.classList.remove('selected');
+              }
+            });
+            
+            menu.style.display = 'flex';
+          };
+          
+          curMonthSpan.addEventListener('click', toggleMenu);
+          arrow.addEventListener('click', toggleMenu);
+        });
+        
+        document.addEventListener('click', () => {
+          document.querySelectorAll('.flatpickr-month-menu').forEach(m => m.style.display = 'none');
+        });
+      }
     });
   }
   
