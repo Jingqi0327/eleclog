@@ -5,7 +5,7 @@ metadata:
   labels:
     app: eleclog-api # 给Deployment自己打的标签，方便管理查找
 spec:
-  replicas: 3 # 期望状态：集群中应始终保持运行3个Pod副本
+  replicas: 1 # 期望状态：集群中应始终保持运行1个Pod副本
   selector:   # 选择器：定义了Deployment“通过什么”来锁定它管理的Pod
     matchLabels:
       app: eleclog-api # 必须与下方template中的labels完全匹配
