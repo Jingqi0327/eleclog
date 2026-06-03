@@ -38,15 +38,15 @@ function bindEvents() {
   // Create Modal
   document.getElementById('openCreateBtn').addEventListener('click', openCreateModal);
   document.getElementById('closeCreateBtn').addEventListener('click', closeCreateModal);
-  document.getElementById('createUserModal').addEventListener('click', (e) => {
-    if (e.target.id === 'createUserModal') closeCreateModal();
+  document.getElementById('createUserModal').addEventListener('mousedown', (e) => {
+    if (e.target === e.currentTarget) closeCreateModal();
   });
   document.getElementById('createUserForm').addEventListener('submit', handleCreateUser);
   
   // Update Modal
   document.getElementById('closeUpdateBtn').addEventListener('click', closeUpdateModal);
-  document.getElementById('updateUserModal').addEventListener('click', (e) => {
-    if (e.target.id === 'updateUserModal') closeUpdateModal();
+  document.getElementById('updateUserModal').addEventListener('mousedown', (e) => {
+    if (e.target === e.currentTarget) closeUpdateModal();
   });
   document.getElementById('updateUserForm').addEventListener('submit', handleUpdateUser);
 }

@@ -183,7 +183,7 @@ window.doImport = async function() {
   }
 }
 
-document.getElementById('importModal').addEventListener('click', e => { if (e.target === e.currentTarget) window.closeImportModal(); });
+document.getElementById('importModal').addEventListener('mousedown', e => { if (e.target === e.currentTarget) window.closeImportModal(); });
 
 // —— 添加房间 (系统级) ——
 let areaData = [], buildingData = [], floorData = [], roomData = [];

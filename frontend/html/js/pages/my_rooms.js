@@ -299,8 +299,8 @@ window.saveThreshold = async function() {
 }
 
 // Modal closing listeners
-document.getElementById('thresholdModal').addEventListener('click', e => { if (e.target === e.currentTarget) window.closeModal(); });
-document.getElementById('bindRoomModal').addEventListener('click', e => { if (e.target === e.currentTarget) window.closeBindRoomModal(); });
+document.getElementById('thresholdModal').addEventListener('mousedown', e => { if (e.target === e.currentTarget) window.closeModal(); });
+document.getElementById('bindRoomModal').addEventListener('mousedown', e => { if (e.target === e.currentTarget) window.closeBindRoomModal(); });
 
 // Init
 document.addEventListener('DOMContentLoaded', () => {

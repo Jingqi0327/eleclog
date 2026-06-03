@@ -199,7 +199,7 @@ function createEditUserModal() {
   </div>`;
   document.body.insertAdjacentHTML('beforeend', modalHtml);
   
-  document.getElementById('editUserModal').addEventListener('click', e => {
+  document.getElementById('editUserModal').addEventListener('mousedown', e => {
     if (e.target === e.currentTarget) closeEditUserModal();
   });
   document.getElementById('closeEditUserBtn').addEventListener('click', closeEditUserModal);
