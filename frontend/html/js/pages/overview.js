@@ -29,7 +29,7 @@ async function loadPage(p) {
     <div class="skeleton skeleton-card"></div>
     <div class="skeleton skeleton-card"></div>`;
   try {
-    const nRes = await api.get('/user-rooms/details', { params: { page_id: 1, page_size: 50 } }).catch(() => ({ data: { notifications: [] } }));
+    const nRes = await api.get('/user-rooms/details', { params: { page_id: 1, page_size: 10 } }).catch(() => ({ data: { notifications: [] } }));
     
     const userRooms = {};
     const boundRooms = nRes.data.notifications || [];

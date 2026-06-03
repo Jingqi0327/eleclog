@@ -12,7 +12,7 @@ if (!isManagerOrAdmin()) {
 
 let rooms = [];
 let page = 1;
-const PAGE_SIZE = 5;
+let PAGE_SIZE = 5;
 let totalPages = 1;
 
 async function refreshRooms(p = 1, showNotif = false) {
@@ -103,6 +103,20 @@ function renderPagination() {
   nextBtn.disabled = page >= totalPages;
   nextBtn.onclick = () => refreshRooms(page + 1);
   el.appendChild(nextBtn);
+}
+
+window.onPageSizeChange = function() {
+  PAGE_SIZE = parseInt(document.getElementById('pageSizeSelect').value, 10);
+  refreshRooms(1);
+}
+
+window.onPageJump = function() {
+  let p = parseInt(document.getElementById('pageJumpInput').value, 10);
+  if (!isNaN(p) && p >= 1 && p <= totalPages) {
+    refreshRooms(p);
+  } else {
+    showToast(`请输入 1 到 ${totalPages} 之间的页码`, 'error');
+  }
 }
 
 window.deleteRoom = async function(id, name) {

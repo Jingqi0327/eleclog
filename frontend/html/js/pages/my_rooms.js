@@ -11,7 +11,7 @@ let userRooms = {}; // room_id -> user_room obj
 
 async function refreshRooms(showNotif = false) {
   try {
-    const nRes = await api.get('/user-rooms/details', { params: { page_id: 1, page_size: 50 } }).catch(() => ({ data: { notifications: [] } }));
+    const nRes = await api.get('/user-rooms/details', { params: { page_id: 1, page_size: 10 } }).catch(() => ({ data: { notifications: [] } }));
     
     userRooms = {};
     const boundRooms = nRes.data.notifications || [];
