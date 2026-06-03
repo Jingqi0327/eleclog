@@ -111,6 +111,7 @@ func (server *Server) setupRouter() {
 
 	userRoutes.POST("/user-rooms", server.createUserRoom)
 	userRoutes.GET("/user-rooms", server.listUserRooms)
+	userRoutes.GET("/user-rooms/details", server.listUserRoomDetails)
 	userRoutes.GET("/user-rooms/:room_id", server.getUserRoom)
 	userRoutes.PATCH("/user-rooms/:room_id", server.updateUserRoom)
 	userRoutes.DELETE("/user-rooms/:room_id", server.deleteUserRoom)

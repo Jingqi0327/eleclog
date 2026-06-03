@@ -54,8 +54,8 @@ type Querier interface {
 	ListRooms(ctx context.Context, arg ListRoomsParams) ([]Room, error)
 	// 查询所有寝室信息
 	ListRoomsAll(ctx context.Context) ([]Room, error)
-	// 根据用户查询其绑定的所有寝室信息
-	ListRoomsByUser(ctx context.Context, arg ListRoomsByUserParams) ([]Room, error)
+	// 查询某个用户的全部关联，包含房间详情
+	ListUserRoomDetails(ctx context.Context, arg ListUserRoomDetailsParams) ([]ListUserRoomDetailsRow, error)
 	// 分页查询关联
 	ListUserRooms(ctx context.Context, arg ListUserRoomsParams) ([]UserRoom, error)
 	// 查询某个寝室的全部关联

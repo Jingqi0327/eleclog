@@ -74,3 +74,22 @@ WHERE is_enabled = true
 -- 统计用户绑定的寝室总数
 SELECT count(*) FROM user_rooms 
 WHERE username = $1;
+
+-- name: ListUserRoomDetails :many
+-- 查询某个用户的全部关联，包含房间详情
+SELECT 
+  ur.username, 
+  ur.room_id, 
+  ur.threshold, 
+  ur.is_enabled, 
+  ur.last_notified_at,
+  r.name AS room_name, 
+  r.area_id, 
+  r.building_code, 
+  r.floor_code, 
+  r.room_code
+FROM user_rooms ur
+JOIN rooms r ON ur.room_id = r.id
+WHERE ur.username = $1
+ORDER BY ur.room_id ASC
+LIMIT $2 OFFSET $3;
