@@ -12,7 +12,7 @@ if (!isManagerOrAdmin()) {
 
 let rooms = [];
 let page = 1;
-const PAGE_SIZE = 5;
+let PAGE_SIZE = 5;
 let totalPages = 1;
 
 async function refreshRooms(p = 1, showNotif = false) {
@@ -105,6 +105,20 @@ function renderPagination() {
   el.appendChild(nextBtn);
 }
 
+window.onPageSizeChange = function() {
+  PAGE_SIZE = parseInt(document.getElementById('pageSizeSelect').value, 10);
+  refreshRooms(1);
+}
+
+window.onPageJump = function() {
+  let p = parseInt(document.getElementById('pageJumpInput').value, 10);
+  if (!isNaN(p) && p >= 1 && p <= totalPages) {
+    refreshRooms(p);
+  } else {
+    showToast(`请输入 1 到 ${totalPages} 之间的页码`, 'error');
+  }
+}
+
 window.deleteRoom = async function(id, name) {
   if (!confirm(`【警告】此操作将从数据库彻底删除房间 ${name} 的所有记录（包括电费流水和用户绑定）！确认硬删除吗？`)) return;
   try {
@@ -169,7 +183,7 @@ window.doImport = async function() {
   }
 }
 
-document.getElementById('importModal').addEventListener('click', e => { if (e.target === e.currentTarget) window.closeImportModal(); });
+document.getElementById('importModal').addEventListener('mousedown', e => { if (e.target === e.currentTarget) window.closeImportModal(); });
 
 // —— 添加房间 (系统级) ——
 let areaData = [], buildingData = [], floorData = [], roomData = [];

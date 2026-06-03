@@ -681,6 +681,12 @@ input:checked + .slider:before {
   max-height: 200px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.3);
   padding: 0.3rem 0;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+
+.custom-select-menu::-webkit-scrollbar {
+  display: none; /* Chrome/Safari/Webkit */
 }
 
 .custom-select-menu.open {

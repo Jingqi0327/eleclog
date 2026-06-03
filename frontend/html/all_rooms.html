@@ -43,7 +43,23 @@
           <tr><td colspan="3" class="empty-row">加载中…</td></tr>
         </tbody>
       </table>
-      <div class="pagination" id="pagination"></div>
+      <div class="pagination-container" style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem;">
+        <div class="page-size-selector" style="font-size: 0.85rem; color: var(--text-muted);">
+          每页显示: 
+          <select id="pageSizeSelect" onchange="onPageSizeChange()" style="padding: 0.2rem 0.5rem; border-radius: 4px; background: var(--surface2); border: 1px solid var(--border); color: var(--text);">
+            <option value="5">5</option>
+            <option value="10">10</option>
+            <option value="20">20</option>
+            <option value="50">50</option>
+          </select>
+        </div>
+        <div class="pagination" id="pagination" style="margin-top: 0;"></div>
+        <div class="page-jumper" style="font-size: 0.85rem; color: var(--text-muted); display: flex; align-items: center; gap: 0.5rem;">
+          前往
+          <input type="number" id="pageJumpInput" min="1" style="width: 50px; padding: 0.2rem; border-radius: 4px; background: var(--surface2); border: 1px solid var(--border); color: var(--text); text-align: center;" onkeypress="if(event.key === 'Enter') onPageJump()">
+          页
+        </div>
+      </div>
     </div>
 
     <!-- 添加新房间 -->

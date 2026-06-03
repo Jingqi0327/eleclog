@@ -7,22 +7,25 @@ requireAuth();
 
 const isAdmin = isManagerOrAdmin();
 let rooms = [];
-let allRoomsCache = [];
 let userRooms = {}; // room_id -> user_room obj
 
 async function refreshRooms(showNotif = false) {
   try {
-    const [rRes, nRes] = await Promise.all([
-      api.get('/rooms', { params: { page_id: 1, page_size: 50 } }),
-      api.get('/user-rooms', { params: { page_id: 1, page_size: 50 } }).catch(() => ({ data: { user_rooms: [] } })),
-    ]);
+    const nRes = await api.get('/user-rooms/details', { params: { page_id: 1, page_size: 10 } }).catch(() => ({ data: { notifications: [] } }));
     
-    allRoomsCache = rRes.data.rooms || [];
     userRooms = {};
-    (nRes.data.notifications || []).forEach(n => userRooms[n.room_id] = n);
+    const boundRooms = nRes.data.notifications || [];
+    boundRooms.forEach(n => userRooms[n.room_id] = n);
     
-    // Only show bounded rooms
-    rooms = allRoomsCache.filter(r => userRooms[r.id]);
+    // Map directly from detailed response
+    rooms = boundRooms.map(n => ({
+      id: n.room_id,
+      name: n.room_name,
+      area_id: n.area_id,
+      building_code: n.building_code,
+      floor_code: n.floor_code,
+      room_code: n.room_code
+    }));
     
     renderRoomTable();
     if (showNotif) { showToast('刷新成功', 'success'); }
@@ -296,8 +299,8 @@ window.saveThreshold = async function() {
 }
 
 // Modal closing listeners
-document.getElementById('thresholdModal').addEventListener('click', e => { if (e.target === e.currentTarget) window.closeModal(); });
-document.getElementById('bindRoomModal').addEventListener('click', e => { if (e.target === e.currentTarget) window.closeBindRoomModal(); });
+document.getElementById('thresholdModal').addEventListener('mousedown', e => { if (e.target === e.currentTarget) window.closeModal(); });
+document.getElementById('bindRoomModal').addEventListener('mousedown', e => { if (e.target === e.currentTarget) window.closeBindRoomModal(); });
 
 // Init
 document.addEventListener('DOMContentLoaded', () => {
