@@ -5,7 +5,7 @@ import { isAuthenticated } from '../auth.js';
 
 // Redirect to manage page if already authenticated
 if (isAuthenticated()) {
-  window.location.href = 'my_rooms.html';
+  window.location.href = 'index.html';
 }
 
 // Check for expired login flag
@@ -42,7 +42,7 @@ async function doLogin() {
     const res = await api.post(`/users/login`, { username, password });
     localStorage.setItem('accesstoken', res.data.access_token);
     localStorage.setItem('userinfo', JSON.stringify(res.data.user));
-    const redirect = new URLSearchParams(location.search).get('redirect') || 'my_rooms.html';
+    const redirect = new URLSearchParams(location.search).get('redirect') || 'index.html';
     window.location.href = redirect;
   } catch (e) {
     errMsg.textContent = e.response?.data?.error || '登录失败，请检查用户名和密码';
