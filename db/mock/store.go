@@ -378,19 +378,19 @@ func (mr *MockStoreMockRecorder) ListRoomsAll(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListRoomsAll", reflect.TypeOf((*MockStore)(nil).ListRoomsAll), arg0)
 }
 
-// ListRoomsByUser mocks base method.
-func (m *MockStore) ListRoomsByUser(arg0 context.Context, arg1 db.ListRoomsByUserParams) ([]db.Room, error) {
+// ListUserRoomDetails mocks base method.
+func (m *MockStore) ListUserRoomDetails(arg0 context.Context, arg1 db.ListUserRoomDetailsParams) ([]db.ListUserRoomDetailsRow, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListRoomsByUser", arg0, arg1)
-	ret0, _ := ret[0].([]db.Room)
+	ret := m.ctrl.Call(m, "ListUserRoomDetails", arg0, arg1)
+	ret0, _ := ret[0].([]db.ListUserRoomDetailsRow)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// ListRoomsByUser indicates an expected call of ListRoomsByUser.
-func (mr *MockStoreMockRecorder) ListRoomsByUser(arg0, arg1 interface{}) *gomock.Call {
+// ListUserRoomDetails indicates an expected call of ListUserRoomDetails.
+func (mr *MockStoreMockRecorder) ListUserRoomDetails(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListRoomsByUser", reflect.TypeOf((*MockStore)(nil).ListRoomsByUser), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListUserRoomDetails", reflect.TypeOf((*MockStore)(nil).ListUserRoomDetails), arg0, arg1)
 }
 
 // ListUserRooms mocks base method.

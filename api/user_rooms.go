@@ -143,6 +143,72 @@ func (server *Server) listUserRooms(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, resp)
 }
 
+type userRoomDetailResponse struct {
+	Username       string    `json:"username"`
+	RoomID         int64     `json:"room_id"`
+	Threshold      int32     `json:"threshold"`
+	IsEnabled      bool      `json:"is_enabled"`
+	LastNotifiedAt time.Time `json:"last_notified_at"`
+	RoomName       string    `json:"room_name"`
+	AreaID         string    `json:"area_id"`
+	BuildingCode   string    `json:"building_code"`
+	FloorCode      string    `json:"floor_code"`
+	RoomCode       string    `json:"room_code"`
+}
+
+type listUserRoomDetailsResponse struct {
+	Total         int64                    `json:"total"`
+	Notifications []userRoomDetailResponse `json:"notifications"`
+}
+
+func (server *Server) listUserRoomDetails(ctx *gin.Context) {
+	var req listUserRoomsRequest
+	if err := ctx.ShouldBindQuery(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	username := getAuthorizedUsername(ctx)
+	arg := db.ListUserRoomDetailsParams{
+		Username: username,
+		Limit:    req.PageSize,
+		Offset:   (req.PageID - 1) * req.PageSize,
+	}
+	details, err := server.store.ListUserRoomDetails(ctx, arg)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+    
+	total, err := server.store.CountRoomsByUser(ctx, username)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	resp := listUserRoomDetailsResponse{
+		Total:         total,
+		Notifications: make([]userRoomDetailResponse, 0, len(details)),
+	}
+
+	for _, d := range details {
+		resp.Notifications = append(resp.Notifications, userRoomDetailResponse{
+			Username:       d.Username,
+			RoomID:         d.RoomID,
+			Threshold:      d.Threshold,
+			IsEnabled:      d.IsEnabled,
+			LastNotifiedAt: d.LastNotifiedAt,
+			RoomName:       d.RoomName,
+			AreaID:         d.AreaID,
+			BuildingCode:   d.BuildingCode,
+			FloorCode:      d.FloorCode,
+			RoomCode:       d.RoomCode,
+		})
+	}
+
+	ctx.JSON(http.StatusOK, resp)
+}
+
 type updateUserRoomRequest struct {
 	Threshold *int32 `json:"threshold" binding:"omitempty,min=0"`
 	IsEnabled *bool  `json:"is_enabled"`

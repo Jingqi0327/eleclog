@@ -49,12 +49,3 @@ SELECT count(*) FROM rooms;
 SELECT * FROM rooms
 WHERE area_id = $1 AND building_code = $2 AND floor_code = $3 AND room_code = $4 LIMIT 1;
 
--- name: ListRoomsByUser :many
--- 根据用户查询其绑定的所有寝室信息
-SELECT r.* FROM rooms r
-JOIN user_rooms ur ON r.id = ur.room_id
-WHERE ur.username = $1
-ORDER BY r.id ASC
-LIMIT $2 
-OFFSET $3;
-

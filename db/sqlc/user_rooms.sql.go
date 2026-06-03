@@ -149,6 +149,76 @@ func (q *Queries) ListDueUserRooms(ctx context.Context) ([]ListDueUserRoomsRow, 
 	return items, nil
 }
 
+const listUserRoomDetails = `-- name: ListUserRoomDetails :many
+SELECT 
+  ur.username, 
+  ur.room_id, 
+  ur.threshold, 
+  ur.is_enabled, 
+  ur.last_notified_at,
+  r.name AS room_name, 
+  r.area_id, 
+  r.building_code, 
+  r.floor_code, 
+  r.room_code
+FROM user_rooms ur
+JOIN rooms r ON ur.room_id = r.id
+WHERE ur.username = $1
+ORDER BY ur.room_id ASC
+LIMIT $2 OFFSET $3
+`
+
+type ListUserRoomDetailsParams struct {
+	Username string `json:"username"`
+	Limit    int32  `json:"limit"`
+	Offset   int32  `json:"offset"`
+}
+
+type ListUserRoomDetailsRow struct {
+	Username       string    `json:"username"`
+	RoomID         int64     `json:"room_id"`
+	Threshold      int32     `json:"threshold"`
+	IsEnabled      bool      `json:"is_enabled"`
+	LastNotifiedAt time.Time `json:"last_notified_at"`
+	RoomName       string    `json:"room_name"`
+	AreaID         string    `json:"area_id"`
+	BuildingCode   string    `json:"building_code"`
+	FloorCode      string    `json:"floor_code"`
+	RoomCode       string    `json:"room_code"`
+}
+
+// 查询某个用户的全部关联，包含房间详情
+func (q *Queries) ListUserRoomDetails(ctx context.Context, arg ListUserRoomDetailsParams) ([]ListUserRoomDetailsRow, error) {
+	rows, err := q.db.Query(ctx, listUserRoomDetails, arg.Username, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListUserRoomDetailsRow{}
+	for rows.Next() {
+		var i ListUserRoomDetailsRow
+		if err := rows.Scan(
+			&i.Username,
+			&i.RoomID,
+			&i.Threshold,
+			&i.IsEnabled,
+			&i.LastNotifiedAt,
+			&i.RoomName,
+			&i.AreaID,
+			&i.BuildingCode,
+			&i.FloorCode,
+			&i.RoomCode,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listUserRooms = `-- name: ListUserRooms :many
 SELECT username, room_id, threshold, is_enabled, last_notified_at FROM user_rooms
 ORDER BY username ASC, room_id ASC

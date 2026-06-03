@@ -202,50 +202,6 @@ func (q *Queries) ListRoomsAll(ctx context.Context) ([]Room, error) {
 	return items, nil
 }
 
-const listRoomsByUser = `-- name: ListRoomsByUser :many
-SELECT r.id, r.name, r.area_id, r.building_code, r.floor_code, r.room_code, r.created_at FROM rooms r
-JOIN user_rooms ur ON r.id = ur.room_id
-WHERE ur.username = $1
-ORDER BY r.id ASC
-LIMIT $2 
-OFFSET $3
-`
-
-type ListRoomsByUserParams struct {
-	Username string `json:"username"`
-	Limit    int32  `json:"limit"`
-	Offset   int32  `json:"offset"`
-}
-
-// 根据用户查询其绑定的所有寝室信息
-func (q *Queries) ListRoomsByUser(ctx context.Context, arg ListRoomsByUserParams) ([]Room, error) {
-	rows, err := q.db.Query(ctx, listRoomsByUser, arg.Username, arg.Limit, arg.Offset)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []Room{}
-	for rows.Next() {
-		var i Room
-		if err := rows.Scan(
-			&i.ID,
-			&i.Name,
-			&i.AreaID,
-			&i.BuildingCode,
-			&i.FloorCode,
-			&i.RoomCode,
-			&i.CreatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const updateRoom = `-- name: UpdateRoom :one
 UPDATE rooms
 SET name = coalesce($2, name),
