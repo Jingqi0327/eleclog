@@ -29,17 +29,21 @@ async function loadPage(p) {
     <div class="skeleton skeleton-card"></div>
     <div class="skeleton skeleton-card"></div>`;
   try {
-    const [rRes, nRes] = await Promise.all([
-      api.get('/rooms', { params: { page_id: 1, page_size: 50 } }),
-      api.get('/user-rooms', { params: { page_id: 1, page_size: 50 } }).catch(() => ({ data: { notifications: [] } }))
-    ]);
+    const nRes = await api.get('/user-rooms/details', { params: { page_id: 1, page_size: 50 } }).catch(() => ({ data: { notifications: [] } }));
     
-    const allRooms = rRes.data.rooms || [];
     const userRooms = {};
-    (nRes.data.notifications || []).forEach(n => userRooms[n.room_id] = n);
+    const boundRooms = nRes.data.notifications || [];
+    boundRooms.forEach(n => userRooms[n.room_id] = n);
     
-    // 无论什么角色，只展示我的房间
-    let rooms = allRooms.filter(r => userRooms[r.id]);
+    // Map directly from detailed response
+    let rooms = boundRooms.map(n => ({
+      id: n.room_id,
+      name: n.room_name,
+      area_id: n.area_id,
+      building_code: n.building_code,
+      floor_code: n.floor_code,
+      room_code: n.room_code
+    }));
     
     const total = rooms.length;
     totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
