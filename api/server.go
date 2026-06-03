@@ -15,6 +15,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
 	"github.com/go-playground/validator/v10"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 type Server struct {
@@ -78,7 +79,11 @@ func (server *Server) setupRouter() {
 		MaxAge: 12 * time.Hour,
 	}))
 
+	// 添加 Prometheus 监控中间件
+	router.Use(PrometheusMiddleware())
 	router.Use(GinLogger(), GinRecovery(true))
+
+	router.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
 	authRoutes := router.Group("/")
 	authRoutes.Use(
