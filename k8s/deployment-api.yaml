@@ -14,6 +14,10 @@ spec:
       labels:
         app: eleclog-api # 给新建的Pod贴上的“工牌”（重要：用于被Selector识别）
     spec:
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "6060"
+        prometheus.io/path: "/metrics"
       nodeSelector:
         type: main_node
       hostAliases:
