@@ -8,3 +8,6 @@ implementation_plan.md
 *.dbdiagram
 develop_docs
 scripts/
+.vscode/
+.ansible
+ansible/
