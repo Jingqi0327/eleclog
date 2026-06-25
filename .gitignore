@@ -11,3 +11,5 @@ scripts/
 .vscode/
 .ansible
 ansible/
+k8s/cnpg/backup-secret.yaml
+k8s/minio/minio-secret.yaml

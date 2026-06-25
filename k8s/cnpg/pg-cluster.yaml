@@ -32,3 +32,25 @@ spec:
   affinity:
     nodeSelector:
       region: osaka
+
+  # ====== 下面是我们在 LA 节点上开启的终极异地容灾配置 ======
+  backup:
+    # 智能备份：让从库负责干苦力（压缩和上传），绝对不占用主库的一丁点 CPU！
+    target: "prefer-standby" 
+    barmanObjectStore:
+      # 对应我们在 MinIO 启动时自动建立的那个文件夹
+      destinationPath: "s3://cnpg-backup/" 
+      # 指向刚才在 LA 部署的 MinIO 内部域名地址
+      endpointURL: "http://minio.default.svc.cluster.local:9000" 
+      s3Credentials:
+        accessKeyId:
+          name: cnpg-backup-credentials
+          key: ACCESS_KEY_ID
+        secretAccessKey:
+          name: cnpg-backup-credentials
+          key: ACCESS_SECRET_KEY
+      # 对传输的 WAL 日志开启 GZIP 压缩，大幅降低 WireGuard 隧道带宽消耗
+      wal:
+        compression: gzip
+      data:
+        compression: gzip
