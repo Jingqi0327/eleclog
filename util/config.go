@@ -44,6 +44,20 @@ func LoadConfig(path string) (config Config, err error) {
 
 	viper.AutomaticEnv() // 读取环境变量
 
+	// 手动绑定环境变量键名，否则在没有配置文件的情况下 Unmarshal 无法知道要读取哪些环境变量
+	envKeys := []string{
+		"ENVIRONMENT", "RUN_MODE", "DB_DRIVER", "DB_SOURCE", "MIGRATION_URL",
+		"REDIS_ADDRESS", "HTTP_SERVER_ADDRESS", "GRPC_SERVER_ADDRESS",
+		"TOKEN_SYMMETRIC_KEY", "ACCESS_TOKEN_DURATION", "REFRESH_TOKEN_DURATION",
+		"SHIRO_JID", "PRICE_PER_KWH", "EMAIL_SENDER_NAME", "EMAIL_SENDER_ADDRESS",
+		"EMAIL_SENDER_PASSWORD", "USERNAME", "PASSWORD", "FULL_NAME", "EMAIL",
+		"DETECT_LOW_BALANCE_CRON", "FETCH_SURPLUS_CRON", "FRONTEND_ORIGIN",
+		"PROXY_GRPC_ADDRESS", "REDIS_LIMITER_CAPACITY", "REDIS_LIMITER_RATE",
+	}
+	for _, k := range envKeys {
+		viper.BindEnv(k)
+	}
+
 	err = viper.ReadInConfig() // 读取配置文件
 	if err != nil {
 		// 如果是因为找不到配置文件导致的错误，我们忽略它（因为生产环境下我们全靠 K8s 环境变量）
