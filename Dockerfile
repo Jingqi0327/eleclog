@@ -8,7 +8,6 @@ FROM alpine:3.22
 WORKDIR /app
 # 从 builder 阶段复制构建好的可执行文件到当前阶段
 COPY --from=builder /app/main .
-COPY app.env .
 # 复制数据库迁移文件到当前阶段，确保应用在运行时可以访问这些文件
 COPY db/migration ./db/migration
 # 复制一个启动脚本到当前阶段，这个脚本会在容器启动时执行，负责先执行数据库迁移，然后再启动应用

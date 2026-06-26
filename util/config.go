@@ -46,7 +46,10 @@ func LoadConfig(path string) (config Config, err error) {
 
 	err = viper.ReadInConfig() // 读取配置文件
 	if err != nil {
-		return
+		// 如果是因为找不到配置文件导致的错误，我们忽略它（因为生产环境下我们全靠 K8s 环境变量）
+		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
+			return
+		}
 	}
 
 	err = viper.Unmarshal(&config) // 将配置文件映射到Config结构体
