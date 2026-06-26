@@ -29,5 +29,15 @@ spec:
         env:
         - name: RUN_MODE
           value: worker
+        envFrom:
+        - secretRef:
+            name: eleclog-secret
         ports:
         - containerPort: 6060 # http API端口（必须与Go代码中Listen的端口一致）
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+          limits:
+            cpu: "500m"
+            memory: "512Mi"

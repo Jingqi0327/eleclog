@@ -13,3 +13,4 @@ scripts/
 ansible/
 k8s/cnpg/backup-secret.yaml
 k8s/minio/minio-secret.yaml
+k8s/eleclog-secret.yaml
