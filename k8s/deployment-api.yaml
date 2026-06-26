@@ -36,6 +36,16 @@ spec:
         imagePullPolicy: Always # 镜像拉取策略：每次创建Pod都从仓库拉取最新镜像（适合开发阶段）
         env:
         - name: RUN_MODE
-          value: backend 
+          value: backend
+        envFrom:
+        - secretRef:
+            name: eleclog-secret
         ports:
         - containerPort: 6060 # http API端口（必须与Go代码中Listen的端口一致）
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+          limits:
+            cpu: "500m"
+            memory: "512Mi"

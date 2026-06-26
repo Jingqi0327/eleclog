@@ -1,0 +1,56 @@
+# 这是 CloudNativePG 的自定义资源 (CRD)，名称为 Cluster。
+# 注意：在你能成功 apply 这个文件之前，你的 K8s 集群里必须先安装好 CNPG 的 Operator 控制器程序！
+
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: eleclog-pg
+  namespace: default
+spec:
+  # 实例数：2 表示我们想要 1 个主库 (Primary) 和 1 个热备从库 (Replica)。
+  # CNPG 会自动帮你在这两个实例间搭建流复制 (Streaming Replication)。
+  instances: 2
+
+  # 存储配置：极其重要！数据库没有持久化就是耍流氓。
+  storage:
+    size: 5Gi   # 申请 5GB 的硬盘空间
+    # local-path 是 K3s 非常良心的一个内置组件，它会把容器里的数据直接存放在物理机本地磁盘的特定路径下。
+    # 相比于云服务商的网络云盘，local-path 的 I/O 读写性能是极其暴力的！
+    storageClass: local-path
+
+  # 资源限制（可选但强烈建议）：防止数据库把服务器内存吃光导致死机
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "500m"
+    limits:
+      memory: "1Gi"
+      cpu: "1"
+
+  # 我们希望数据库跑在我们指定的性能好的机器上。
+  # 之前让你在机器上打的标签是 region=osaka，填在这里即可。
+  affinity:
+    nodeSelector:
+      region: osaka
+
+  # ====== 下面是我们在 LA 节点上开启的终极异地容灾配置 ======
+  backup:
+    # 智能备份：让从库负责干苦力（压缩和上传），绝对不占用主库的一丁点 CPU！
+    target: "prefer-standby" 
+    barmanObjectStore:
+      # 对应我们在 MinIO 启动时自动建立的那个文件夹
+      destinationPath: "s3://cnpg-backup/" 
+      # 指向刚才在 LA 部署的 MinIO 内部域名地址
+      endpointURL: "http://minio.default.svc.cluster.local:9000" 
+      s3Credentials:
+        accessKeyId:
+          name: cnpg-backup-credentials
+          key: ACCESS_KEY_ID
+        secretAccessKey:
+          name: cnpg-backup-credentials
+          key: ACCESS_SECRET_KEY
+      # 对传输的 WAL 日志开启 GZIP 压缩，大幅降低 WireGuard 隧道带宽消耗
+      wal:
+        compression: gzip
+      data:
+        compression: gzip

@@ -29,5 +29,15 @@ spec:
         env:
         - name: RUN_MODE
           value: proxy
+        envFrom:
+        - secretRef:
+            name: eleclog-secret
         ports:
         - containerPort: 7070 
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+          limits:
+            cpu: "500m"
+            memory: "512Mi"

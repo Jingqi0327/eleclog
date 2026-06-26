@@ -1,0 +1,87 @@
+# 这是一个标准的原生 K8s 部署声明，用于在集群中拉起一个 MinIO 对象存储服务。
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: minio
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: minio
+  template:
+    metadata:
+      labels:
+        app: minio
+    spec:
+      nodeSelector:
+        region: la
+      containers:
+        - name: minio
+          image: minio/minio:latest
+          # 核心技巧：启动时自动在 /data 下创建一个 cnpg-backup 文件夹，MinIO 会自动把它识别为一个 Bucket (存储桶)
+          command:
+            - /bin/sh
+            - -c
+            - mkdir -p /data/cnpg-backup && minio server /data --console-address ":9001"
+          env:
+            - name: MINIO_ROOT_USER
+              valueFrom:
+                secretKeyRef:
+                  name: minio-root-credentials
+                  key: rootUser
+            - name: MINIO_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: minio-root-credentials
+                  key: rootPassword
+          ports:
+            - containerPort: 9000  # API 端口（CNPG 传数据用）
+            - containerPort: 9001  # Web UI 网页管理端口
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          volumeMounts:
+            - name: minio-data
+              mountPath: /data
+      volumes:
+        - name: minio-data
+          persistentVolumeClaim:
+            claimName: minio-pvc
+
+---
+# 申请一块 10GB 的硬盘，用来存放洛杉矶的物理备份数据
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: minio-pvc
+  namespace: default
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 10Gi
+
+---
+# 给 MinIO 注册一个内部域名，CNPG 会通过这个域名把日志传过来
+apiVersion: v1
+kind: Service
+metadata:
+  name: minio
+  namespace: default
+spec:
+  ports:
+    - name: api
+      port: 9000
+      targetPort: 9000
+    - name: console
+      port: 9001
+      targetPort: 9001
+  selector:
+    app: minio
