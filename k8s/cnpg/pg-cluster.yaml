@@ -54,3 +54,24 @@ spec:
         compression: gzip
       data:
         compression: gzip
+
+  bootstrap:
+    initdb:
+      import:
+        type: microservice # 仅导入指定库的模式
+        databases:
+          - elec_log      # 你要导入的旧数据库名
+        source:
+          externalCluster: old-docker-pg
+
+  externalClusters:
+    - name: old-docker-pg
+      connectionParameters:
+        host: "10.0.0.17"  # 旧 Docker 数据库的宿主机 IP
+        port: "5432"
+        user: "root"
+        dbname: "elec_log"
+      password:
+        name: old-db-credentials
+        key: password
+
