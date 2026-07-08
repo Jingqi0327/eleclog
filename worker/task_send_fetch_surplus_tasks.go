@@ -3,6 +3,8 @@ package worker
 import (
 	"context"
 	"fmt"
+	"math/rand/v2"
+	"time"
 
 	"github.com/Jingqi0327/eleclog/logger"
 	"github.com/hibiken/asynq"
@@ -58,7 +60,11 @@ func (processor *RedisTaskProcessor) ProcessTaskSendFetchSurplusTasks(ctx contex
 			FloorCode:    room.FloorCode,
 			RoomCode:     room.RoomCode,
 		}
-		err := processor.distributor.DistributeTaskFetchSurplusAndStore(ctx, payload)
+
+		// 添加随机延迟，将所有任务打散在 0 到 5 分钟（300秒）内执行，防止集中并发触发第三方 API 封禁
+		delay := time.Duration(rand.IntN(300)) * time.Second
+
+		err := processor.distributor.DistributeTaskFetchSurplusAndStore(ctx, payload, asynq.ProcessIn(delay))
 		if err != nil {
 			logger.Log.Error("fail to distribute task",
 				zap.String("room_name", room.Name),
