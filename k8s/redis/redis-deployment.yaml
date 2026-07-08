@@ -1,0 +1,34 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: eleclog-redis
+spec:
+  selector:
+    matchLabels:
+      app: eleclog-redis
+  template:
+    metadata:
+      labels:
+        app: eleclog-redis
+    spec:
+      nodeSelector:
+        type: main_node
+      containers:
+      - name: redis
+        image: redis:alpine
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+          limits:
+            cpu: "500m"
+            memory: "256Mi"
+        ports:
+        - containerPort: 6379
+        volumeMounts:
+        - name: redis-data
+          mountPath: /data
+      volumes:
+      - name: redis-data
+        persistentVolumeClaim:
+          claimName: eleclog-redis-pvc

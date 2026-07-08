@@ -1,0 +1,10 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Backup
+metadata:
+  # 注意：在 K8s 里，同一个名字的资源只能创建一次。
+  # 如果你以后想再手动触发一次，必须修改这里的 name（比如改成 manual-backup-2）
+  name: manual-backup-1
+spec:
+  cluster:
+    # 指定你要备份的数据库集群名字
+    name: eleclog-pg

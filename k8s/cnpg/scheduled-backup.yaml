@@ -1,0 +1,13 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: ScheduledBackup
+metadata:
+  name: eleclog-pg-daily-backup
+spec:
+  cluster:
+    name: eleclog-pg
+  # 使用标准的 Cron 表达式。
+  # 这里的 "0 0 2 * * *" 表示每天凌晨 2:00:00 准时触发一次全量备份（CNPG 需要 6 位参数，首位是秒）
+  schedule: "0 0 2 * * *"
+  # 设置为主库优先，但如果配置了 prefer-standby（我们配了），它会在条件允许时自动寻找从库打快照以减轻主库压力
+  target: primary
+  # 备份保留策略（可选），不过 CNPG 推荐在集群级别配置 retentionPolicy，所以这里保持极简即可
