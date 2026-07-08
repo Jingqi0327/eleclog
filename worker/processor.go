@@ -4,6 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
+	"math/rand/v2"
+	"time"
 
 	db "github.com/Jingqi0327/eleclog/db/sqlc"
 	"github.com/Jingqi0327/eleclog/logger"
@@ -70,6 +73,14 @@ func NewRedisTaskProcessor(
 					zap.ByteString("payload", task.Payload()))
 			}),
 			Logger: NewAsynqLogger(),
+
+			RetryDelayFunc: func(n int, e error, t *asynq.Task) time.Duration {
+				if t.Type() == TaskFetchSurplusAndStore {
+					s := int(math.Pow(float64(n), 2)) + 15 + (rand.IntN(30) * (n + 1))
+					return time.Duration(s) * time.Second
+				}
+				return asynq.DefaultRetryDelayFunc(n, e, t)
+			},
 		},
 	)
 
