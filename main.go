@@ -58,58 +58,27 @@ func main() {
 
 	logger.Log.Info("[System] Starting processes...")
 
-	connPool, err := pgxpool.New(context.Background(), config.DBSource)
-	if err != nil {
-		logger.Log.Fatal("[System] Cannot connect to db:", zap.Error(err))
-	}
-
-	store := db.NewStore(connPool)
-	runMigrate(config.MigrationURL, config.DBSource)
-	initDefaultUser(config, store)
-
-	redisOpt := asynq.RedisClientOpt{
-		Addr: config.RedisAddress,
-	}
-	taskDistributor := worker.NewRedisTaskDistributor(redisOpt)
-
-	redisClient := redis.NewClient(&redis.Options{
-		Addr: config.RedisAddress,
-	})
-	redisCache := cache.NewRedisCache(redisClient)
-	rateLimiter := cache.NewRedisRateLimiter(redisClient)
-
 	ctx, stop := signal.NotifyContext(context.Background(), interruptSignals...)
 	defer stop()
 	waitGroup, ctx := errgroup.WithContext(ctx)
 
-	proxyClient, cleanupProxy, err := createProxyClient(config)
-	if err != nil {
-		logger.Log.Fatal("[System] Cannot create proxy client:", zap.Error(err))
-	}
-	defer cleanupProxy()
+	var cleanup func()
 
 	switch config.RunMode {
 	case "backend":
-		logger.Log.Info("[System] Running in backend mode, skipping collector and mail alerter...")
-		runGinServer(waitGroup, ctx, config, store, redisCache, proxyClient, rateLimiter)
+		cleanup = startBackend(ctx, waitGroup, config)
 	case "worker":
-		logger.Log.Info("[System] Running in worker mode, skipping API server...")
-		runTaskScheduler(waitGroup, ctx, config, redisOpt)
-		runTaskProcessor(waitGroup, ctx, config, redisOpt, store, taskDistributor, proxyClient)
+		cleanup = startWorker(ctx, waitGroup, config)
 	case "proxy":
-		logger.Log.Info("[System] Running in proxy mode...")
-		runGrpcServer(waitGroup, ctx, config)
+		cleanup = startProxy(ctx, waitGroup, config)
 	case "main":
-		logger.Log.Info("[System] Running in main mode...")
-		runTaskScheduler(waitGroup, ctx, config, redisOpt)
-		runTaskProcessor(waitGroup, ctx, config, redisOpt, store, taskDistributor, proxyClient)
-		runGinServer(waitGroup, ctx, config, store, redisCache, proxyClient, rateLimiter)
+		cleanup = startMainMode(ctx, waitGroup, config)
 	default:
-		logger.Log.Info("[System] Running in full mode, starting API server, mail alerter...")
-		runTaskScheduler(waitGroup, ctx, config, redisOpt)
-		runTaskProcessor(waitGroup, ctx, config, redisOpt, store, taskDistributor, proxyClient)
-		runGinServer(waitGroup, ctx, config, store, redisCache, proxyClient, rateLimiter)
-		runGrpcServer(waitGroup, ctx, config)
+		cleanup = startFull(ctx, waitGroup, config)
+	}
+
+	if cleanup != nil {
+		defer cleanup()
 	}
 
 	err = waitGroup.Wait()
@@ -117,6 +86,103 @@ func main() {
 		logger.Log.Fatal("[System] Error from wait group: ", zap.Error(err))
 	}
 	logger.Log.Info("[System] All processes have stopped")
+}
+
+// ---------------- 资源 Setup ----------------
+
+func setupDB(config util.Config) db.Store {
+	connPool, err := pgxpool.New(context.Background(), config.DBSource)
+	if err != nil {
+		logger.Log.Fatal("[System] Cannot connect to db:", zap.Error(err))
+	}
+	return db.NewStore(connPool)
+}
+
+func setupAsynq(config util.Config) (asynq.RedisClientOpt, worker.TaskDistributor) {
+	redisOpt := asynq.RedisClientOpt{
+		Addr: config.RedisAddress,
+	}
+	return redisOpt, worker.NewRedisTaskDistributor(redisOpt)
+}
+
+func setupRedisCache(config util.Config) (cache.Cache, cache.RateLimiter) {
+	redisClient := redis.NewClient(&redis.Options{
+		Addr: config.RedisAddress,
+	})
+	return cache.NewRedisCache(redisClient), cache.NewRedisRateLimiter(redisClient)
+}
+
+func setupProxyClient(config util.Config) (pb.ProxyServiceClient, func()) {
+	proxyClient, cleanupProxy, err := createProxyClient(config)
+	if err != nil {
+		logger.Log.Fatal("[System] Cannot create proxy client:", zap.Error(err))
+	}
+	return proxyClient, cleanupProxy
+}
+
+// ---------------- 按模式启动 ----------------
+
+func startBackend(ctx context.Context, waitGroup *errgroup.Group, config util.Config) func() {
+	logger.Log.Info("[System] Running in backend mode, skipping collector and mail alerter...")
+	store := setupDB(config)
+	runMigrate(config.MigrationURL, config.DBSource)
+	initDefaultUser(config, store)
+
+	redisCache, rateLimiter := setupRedisCache(config)
+	proxyClient, cleanupProxy := setupProxyClient(config)
+
+	runGinServer(waitGroup, ctx, config, store, redisCache, proxyClient, rateLimiter)
+	return cleanupProxy
+}
+
+func startWorker(ctx context.Context, waitGroup *errgroup.Group, config util.Config) func() {
+	logger.Log.Info("[System] Running in worker mode, skipping API server...")
+	store := setupDB(config)
+	redisOpt, taskDistributor := setupAsynq(config)
+	proxyClient, cleanupProxy := setupProxyClient(config)
+
+	runTaskScheduler(waitGroup, ctx, config, redisOpt)
+	runTaskProcessor(waitGroup, ctx, config, redisOpt, store, taskDistributor, proxyClient)
+	return cleanupProxy
+}
+
+func startProxy(ctx context.Context, waitGroup *errgroup.Group, config util.Config) func() {
+	logger.Log.Info("[System] Running in proxy mode...")
+	runGrpcServer(waitGroup, ctx, config)
+	return nil
+}
+
+func startMainMode(ctx context.Context, waitGroup *errgroup.Group, config util.Config) func() {
+	logger.Log.Info("[System] Running in main mode...")
+	store := setupDB(config)
+	runMigrate(config.MigrationURL, config.DBSource)
+	initDefaultUser(config, store)
+
+	redisOpt, taskDistributor := setupAsynq(config)
+	redisCache, rateLimiter := setupRedisCache(config)
+	proxyClient, cleanupProxy := setupProxyClient(config)
+
+	runTaskScheduler(waitGroup, ctx, config, redisOpt)
+	runTaskProcessor(waitGroup, ctx, config, redisOpt, store, taskDistributor, proxyClient)
+	runGinServer(waitGroup, ctx, config, store, redisCache, proxyClient, rateLimiter)
+	return cleanupProxy
+}
+
+func startFull(ctx context.Context, waitGroup *errgroup.Group, config util.Config) func() {
+	logger.Log.Info("[System] Running in full mode, starting API server, mail alerter...")
+	store := setupDB(config)
+	runMigrate(config.MigrationURL, config.DBSource)
+	initDefaultUser(config, store)
+
+	redisOpt, taskDistributor := setupAsynq(config)
+	redisCache, rateLimiter := setupRedisCache(config)
+	proxyClient, cleanupProxy := setupProxyClient(config)
+
+	runTaskScheduler(waitGroup, ctx, config, redisOpt)
+	runTaskProcessor(waitGroup, ctx, config, redisOpt, store, taskDistributor, proxyClient)
+	runGinServer(waitGroup, ctx, config, store, redisCache, proxyClient, rateLimiter)
+	runGrpcServer(waitGroup, ctx, config)
+	return cleanupProxy
 }
 
 func runGinServer(
@@ -343,6 +409,7 @@ func initDefaultUser(config util.Config, store db.Store) {
 
 // 这里是运行数据库迁移的代码
 func runMigrate(migrationURL string, dbSource string) {
+	logger.Log.Info("[System] Trying to run migration...")
 	// 1. 创建一个新的迁移实例
 	migration, err := migrate.New(migrationURL, dbSource)
 	if err != nil {

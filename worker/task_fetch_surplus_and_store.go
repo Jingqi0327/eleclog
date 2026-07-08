@@ -31,6 +31,13 @@ func (distributor *RedisTaskDistributor) DistributeTaskFetchSurplusAndStore(ctx 
 	if err != nil {
 		return fmt.Errorf("fail to marshal task payload: %w", err)
 	}
+
+	// 重试 10 次
+	defaultOpts := []asynq.Option{
+		asynq.MaxRetry(10),
+	}
+	opts = append(defaultOpts, opts...)
+
 	// 创建一个新的 Asynq 任务
 	task := asynq.NewTask(TaskFetchSurplusAndStore, jsonPayload, opts...)
 	// 将任务发送到 Redis 队列
